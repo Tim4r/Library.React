@@ -1,7 +1,10 @@
 
 import { Button,Layout, Menu, Table,Col , Input, Row} from 'antd';
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
+import Pagination from './Pagination';
 import { BookData } from './BookData';
+import axios from 'axios';
+
 import { Link, useNavigate } from 'react-router-dom';
 import {
     MenuFoldOutlined,
@@ -13,15 +16,31 @@ import {
     PlusOutlined
   } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
-
-
   const { Header, Sider} = Layout;
   const { Search } = Input;
 
   export function BookList()
   {
+    const [postPerPage,setPostPerPage]=useState(8);
+    const [currentPage,SetCurrentPage]=useState(1);
+    const lastPostIndex=currentPage * postPerPage;
+    const firstPostIndex=lastPostIndex-postPerPage;
     const [collapsed, setCollapsed] = useState(false);
-    const books=useSelector((state) => state.books)
+    const [data,SetData]=useState([]);
+    const currentPosts = data.slice(firstPostIndex, lastPostIndex);
+
+    const getData=()=>
+      {
+        axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${1}&pageSize=10`).then((result)=> {
+          SetData(result.data);
+        })
+      }
+      useEffect(()=>
+      {
+        getData();
+      },[])
+  
+
     const onClick = (e) => {
         };
         const items= [
@@ -168,7 +187,7 @@ import { useSelector } from 'react-redux';
 
 <Row justify='space-evenly' style={{top:0}}>
 {
-  books.map((book,index)=>
+  currentPosts.map((book,index)=>
   (
     
     <BookData key={index} title={book.title} author={book.authorid} category={book.categoryid} id={book.id}></BookData>
@@ -180,7 +199,7 @@ import { useSelector } from 'react-redux';
 style={{margin:20}}
 >+</Button> </Link>
 </Row>
-
+<Pagination totalPosts={data.length} postsPerPage={postPerPage} setCurrentPage={SetCurrentPage}></Pagination>
       </div>
 
     </Layout>);

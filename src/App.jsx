@@ -10,7 +10,7 @@ function App()
     return(
         <BrowserRouter>
         <Routes>
-            <Route path='/' element={<BookListUserSide></BookListUserSide>}></Route>
+            <Route path='/' element={<BookList></BookList>}></Route>
             <Route path='/create' element={<BookInfo></BookInfo>}></Route>
             <Route path="/edit/:id" element={<BookInfoForEdit></BookInfoForEdit>}></Route>
             <Route path="/userbooks" element={<BookListUser></BookListUser>}></Route>

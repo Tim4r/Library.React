@@ -3,6 +3,7 @@ import {Layout} from 'antd';
 import { Avatar, Card } from 'antd';
 import { deleteBook } from './BooksReducer';
 import ящерка from './ящерка.png'
+import React, { useState,useEffect } from 'react';
 import {
     EditOutlined, 
     DeleteOutlined,
@@ -11,13 +12,12 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
   const { Header, Sider} = Layout;
   const { Meta } = Card;
+
 export function BookData (book){
-  const books = useSelector((state) => (state.books))
-  const dispatch = useDispatch();
 
   const handleDelete = (id) => {
-    dispatch(deleteBook({id:id}))
   };
+
   return(
 
     <Layout>

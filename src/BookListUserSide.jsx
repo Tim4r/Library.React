@@ -34,7 +34,7 @@ import { useNavigate } from 'react-router-dom';
 
     const getData=()=>
     {
-      axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${2}&pageSize=10`).then((result)=> {
+      axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${1}&pageSize=10`).then((result)=> {
         SetData(result.data);
       })
     }
@@ -200,3 +200,14 @@ navigate("/userbooks");
       </div>
     </Layout>);
   }
+
+  
+/* 
+  {
+    "title": "string",
+    "isbn": "string",
+    "description": "string",
+    "image": "string",
+    "authorId": 0,
+    "categoryId": 0
+  } */

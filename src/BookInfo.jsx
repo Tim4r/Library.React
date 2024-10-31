@@ -1,7 +1,8 @@
 
 import { Button,Layout, Input,Select} from 'antd';
 import { Image, Card } from 'antd';
-import React, { useState } from 'react';
+import axios from 'axios';
+import React, { useState,useEffect } from 'react';
 import { useDispatch,useSelector } from 'react-redux';
 import { addBook } from './BooksReducer';
 import ящерка from './ящерка.png'
@@ -16,20 +17,41 @@ import { useNavigate } from 'react-router-dom';
 
   export function BookInfo()
   {
-    const [name,setName] = useState('')
-    const [jenre,setJanre]=useState('')
-    const [author,setAuthor] = useState('')
-    const [isbn,setISBN] = useState('')
-    const [description,setDescription]=useState('')
-    const dispatch=useDispatch();
-    const books=useSelector((state)=>state.books);
     const navigate=useNavigate();
+    const [title,SetTitle]=useState();
+    const [isbn,SetIsbn]=useState();
+    const [description,Setdescription]=useState();
+    const [authorid,SetAuthor]=useState();
+    const [categoryId,SetCategoryId]=useState();
+    const [data,SetData]=useState([]);
+
     const handleSubmit=(event)=>
     {
-      event.preventDefault();
-      dispatch(addBook({id:books[books.length-1].id +1, title:name, description:description, authorid:1, categoryid:2, isbn:isbn,img:ящерка}))
+      const url="https://localhost:7190/api/CreateBook";
+    const data=
+    {
+        "title": title,
+        "isbn": isbn,
+        "description": description,
+        "image": null,
+        "authorId": authorid,
+        "categoryId": categoryId
+    };
+    axios.post(url,data).then((result)=>{getData()});
       navigate('/')
     }
+    
+  const getData=()=>
+    {
+      axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${1}&pageSize=10`).then((result)=> {
+        SetData(result.data);
+      })
+    }
+    useEffect(()=>
+    {
+      getData();
+    },[])
+
     const onSearch = (value, _e, info) => console.log(info?.source, value);
     return(
         <Layout>
@@ -97,13 +119,13 @@ import { useNavigate } from 'react-router-dom';
               }}
     />
     <div>
-    <Input onChange={e=>setName(e.target.value)} style={{marginLeft:340, width:400, marginTop:30}} placeholder='name'></Input>
+    <Input value={title} onChange={e=>SetTitle(e.target.value)} style={{marginLeft:340, width:400, marginTop:30}} placeholder='name'></Input>
     <br></br>
-      <Input onChange={e=>setJanre(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='janre'></Input>
+      <Input value={categoryId} onChange={e=>SetCategoryId(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='janre'></Input>
       <br></br>
-      <Input onChange={e=>setAuthor(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='author'></Input>
+      <Input value={authorid} onChange={e=>SetAuthor(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='author'></Input>
       <br></br>
-      <Input onChange={e=>setISBN(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='ISBN'></Input>
+      <Input value={isbn} onChange={e=>SetIsbn(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='ISBN'></Input>
     </div>
 
 <Button color="primary" variant="solid"
@@ -134,7 +156,7 @@ import { useNavigate } from 'react-router-dom';
       <Input
       style={{marginLeft:50, position:'fixed',marginTop:150}}
       placeholder='desc'
-      onChange={e=>setDescription(e.target.value)}
+      onChange={e=>Setdescription(e.target.value)}
       ></Input>
     </div>
 

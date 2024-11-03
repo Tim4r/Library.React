@@ -1,6 +1,6 @@
 
-import { Button,Layout, Menu, Table,Col , Input, Row} from 'antd';
-import React, { useState,useEffect } from 'react';
+import { Button, Layout, Menu, Table, Col , Input, Row, Modal } from 'antd';
+import React, { useState, useEffect } from 'react';
 import Pagination from './Pagination';
 import { BookData } from './BookData';
 import axios from 'axios';
@@ -31,7 +31,7 @@ import { useSelector } from 'react-redux';
 
     const getData=()=>
       {
-        axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${1}&pageSize=10`).then((result)=> {
+        axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${8}&pageSize=6`).then((result)=> {
           SetData(result.data);
         })
       }
@@ -73,6 +73,10 @@ import { useSelector } from 'react-redux';
             },
           ];
         const onSearch = (value, _e, info) => console.log(info?.source, value);
+
+        const refreshBooks = () => {
+          getData();
+        };
 
     return(<Layout
       style={{
@@ -187,10 +191,9 @@ import { useSelector } from 'react-redux';
 
 <Row justify='space-evenly' style={{top:0}}>
 {
-  currentPosts.map((book,index)=>
+  currentPosts.map((book, index)=>
   (
-    
-    <BookData key={index} title={book.title} author={book.authorid} category={book.categoryid} id={book.id}></BookData>
+    <BookData key={index} book={book} refreshBooks={refreshBooks}></BookData>
   )
   )
 }
@@ -199,6 +202,7 @@ import { useSelector } from 'react-redux';
 style={{margin:20}}
 >+</Button> </Link>
 </Row>
+
 <Pagination totalPosts={data.length} postsPerPage={postPerPage} setCurrentPage={SetCurrentPage}></Pagination>
       </div>
 

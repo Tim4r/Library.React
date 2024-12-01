@@ -1,47 +1,31 @@
 
-import { Button, Input, Layout } from 'antd';
+import { Button, Input, Layout,message } from 'antd';
 import { useEffect, useState} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { useSelector,useDispatch } from 'react-redux';
-import { setUserToken } from './tokenSlice';
 import axios from 'axios';
-export function Login (){
+export function Registration (){
     const navigate=useNavigate();
     const [login,setLogin] = useState("")
     const [password,setPassword] = useState("")
     const [userid,setUserid]=useState('')
-    const token = useSelector((state)=>state.userToken.token);
-    console.log(token)
-    const dispatch = useDispatch();
+    const [email,SetEmail]=useState("")
     const LoginCheck=()=>
         {
-
             const data=
             {
                   "username": login,
+                  "email":email,
                   "password": password
             }
-                    axios.post("https://localhost:7190/api/Account/Login",data).then((result)=> {
-
-
-                    dispatch(setUserToken(result.data.accessToken));
-                      if(jwtDecode(result.data.accessToken).role === "Admin")
-                      {
-                        navigate("/books");
-                      }
-                      else
-                      {
-                        navigate(`/books/${jwtDecode(result.data.accessToken).sub}`)
-                      }
-                       
+                    axios.post("https://localhost:7190/api/Authentification/Register",data).then((result)=> {
+                        message.info("succesfully register!");
+                       navigate(`/`)
+                    }).catch((err)=>
+                    {
+                        message.info("please,check your password");
                     })
         }
-
-        const Registration=()=>
-            {
-               navigate("/regist");
-            }
  
   return(
     <Layout
@@ -72,6 +56,17 @@ export function Login (){
             }
         }
         >
+        </Input>
+
+        <Input placeholder='введите почту'
+        onChange={e=>SetEmail(e.target.value)}
+        style={
+            {
+                marginTop:40,
+                width:480
+            }
+        }
+        >
         
         </Input>
 
@@ -86,10 +81,6 @@ export function Login (){
         >
         </Input>
 
-<p
-style={{textDecoration:'underline', color:'blue'}}
-onClick={Registration}
->создать аккаунт</p>
 
         <Button
         onClick={LoginCheck}
@@ -102,7 +93,7 @@ onClick={Registration}
             }
         }
         >
-            Войти
+            Зарегистрироваться
         </Button>
     </Layout>
   )

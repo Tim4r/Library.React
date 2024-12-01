@@ -1,52 +1,77 @@
 
-import { Button,Layout, Menu, Table, theme, Input} from 'antd';
+import { Button, Layout, Menu, Table, theme, Input, message } from 'antd';
 import { Avatar, Card } from 'antd';
-import { useDispatch, useSelector } from 'react-redux';
-import { addToLoans } from './UserLibraryReducer';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
 import ящерка from './ящерка.png'
 import {
-    EditOutlined, 
-    DeleteOutlined,
-    PlusOutlined,
-  } from '@ant-design/icons';
-  const { Header, Sider} = Layout;
-  const { Meta } = Card;
+  PlusOutlined,
+} from '@ant-design/icons';
+import { useEffect } from 'react';
+const { Header, Sider } = Layout;
+const { Meta } = Card;
 
-export function BookDataUserSide (book){
+export function BookDataUserSide(book) {
+var a=true;
 
-    const dispatch=useDispatch();
-
-  const handleAdd = (book) => {
-    dispatch(addToLoans({book}));
-  };
-  return(
-    <Layout>
-              <Card
-              key={book.id}
-    style={{
-      width: 300,
-      overflow: 'visible',
-      height:300,
-      margin:20,
-      marginBottom:20,
-      top:0
-    }}
-    cover={
-      <img
-        alt="example"
-        src={ящерка}
-      />
+  async function handleAdd()
+  {
+    const data =
+    {
+      "returnTime": "2024-11-10T11:52:35.558Z",
+      "userId": parseInt(book.userId),
+      "bookId": book.id
     }
-    actions={[
-      <PlusOutlined key="add" onClick={()=>handleAdd(book)}/>,
-    ]}
-  >
-    <Meta
-      title={book.title}
-      description={book.author}
-    />
-  </Card>
-    </Layout>
+    await axios.post("https://localhost:7190/api/HandOutBook", data).catch((err) => { message.info("book already loan");  a=false;});
+  }
+
+  async function FindLoanBooks(params) {
     
+  }
+
+  return (
+    <Layout
+      style={{
+        width: 300,
+        height: 300,
+        margin: 20,
+        marginBottom: 30,
+        top: 0,
+        display: 'inline-flex',
+        background: 'white'
+      }}
+    >
+      
+      <Card
+        key={book.id}
+        style={{
+          width: 300,
+          overflow: 'visible',
+          height: 300,
+          margin: 20,
+          marginBottom: 20,
+          top: 0,
+          flexGrow: 1,
+        }}
+        cover={
+          <img
+            alt="example"
+            src={ящерка}
+          />
+        }
+        actions={[
+          a ? <PlusOutlined onClick={handleAdd} key="add" /> : <p>Нет в наличии</p>
+
+        ]}
+      >
+        <Link to={`/book/${book.id}`}>
+        <Meta
+          title={book.title}
+          description={book.author}
+        />
+        </Link>
+      </Card>
+    </Layout>
+
   )
 };

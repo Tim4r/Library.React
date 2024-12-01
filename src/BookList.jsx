@@ -1,6 +1,6 @@
 
-import { Button, Layout, Menu, Table, Col , Input, Row, Modal } from 'antd';
-import React, { useState, useEffect } from 'react';
+import { Button,Layout, Menu, Table,Col , Input, Row} from 'antd';
+import React, { useState,useEffect } from 'react';
 import Pagination from './Pagination';
 import { BookData } from './BookData';
 import axios from 'axios';
@@ -18,31 +18,119 @@ import {
 import { useSelector } from 'react-redux';
   const { Header, Sider} = Layout;
   const { Search } = Input;
-
   export function BookList()
   {
-    const [postPerPage,setPostPerPage]=useState(8);
-    const [currentPage,SetCurrentPage]=useState(1);
-    const lastPostIndex=currentPage * postPerPage;
-    const firstPostIndex=lastPostIndex-postPerPage;
+    const token = useSelector((state)=>state.userToken.token);
     const [collapsed, setCollapsed] = useState(false);
     const [data,SetData]=useState([]);
-    const currentPosts = data.slice(firstPostIndex, lastPostIndex);
+    const [currentPage,SetCurrentPage]=useState(1);
+    const [postPerPage,setPostPerPage]=useState(8);
+    const lastPostIndex=currentPage * postPerPage;
+    const firstPostIndex=lastPostIndex-postPerPage;
+    const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);
+    const [janres,SetJanres]=useState([]);
+    const [authors,SetAuthors]=useState([]);
 
-    const getData=()=>
-      {
-        axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${8}&pageSize=6`).then((result)=> {
-          SetData(result.data);
+    const [authorId, setAuthorId] = useState(null);
+    const [categoryId, setCategoryId] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    var menuJanres =[];
+    var menuAuthors=[];
+
+    async function getPageOfResults(page, authorId = null, categoryId = null, searchQuery = "") {
+
+      const a = await axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`, {
+        params: { authorId, categoryId, searchQuery },
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      }).catch((err) => { 
+        axios.post("https://localhost:7190/api/Account/RefreshToken", refreshToken).then((result)=>
+        {
+          dispatch(setUserToken(result.data.accessToken));
+          dispatch(setUserToken(result.data.refreshToken));
         })
-      }
-      useEffect(()=>
-      {
-        getData();
-      },[])
+      });
+      return a.data;
+    }
   
+    async function getPageOfAuthors(page) {
+      const b = await axios.get(`https://localhost:7190/api/GetAllAuthors?pageNumber=${page}&pageSize=10`,
+        {headers: {
+          'Authorization': 'Bearer ' + token
+        }}
+      );
+      return b.data;
+    }
+  
+    async function getPageOfCategories() {
+      axios.get("https://localhost:7190/api/GetAllGenresOfBooks", {headers: {
+        'Authorization': 'Bearer ' + token
+      }}).then((result) => {
+        SetJanres(result.data);
+      });
+  
+    }
+    async function getAllResults(authorId, categoryId, searchQuery) {
+      let data = [];
+      let dataA = [];
+      let lastResultsLength = 10;
+      let lastResultsLengthA = 10;
+      let page = 1;
+      let pageA = 1;
+      while (lastResultsLength === 10) {
+        const newResults = await getPageOfResults(page, authorId, categoryId, searchQuery);
+        page++;
+        lastResultsLength = newResults.length;
+        data = Object.values(data.concat(newResults));
+      }
+      while (lastResultsLengthA === 10) {
+        const newResults = await getPageOfAuthors(pageA);
+        pageA++;
+        lastResultsLengthA = newResults.length;
+        dataA = Object.values(dataA.concat(newResults));
+      }
+      await SetData(data);
+      await SetAuthors(dataA);
+      await getPageOfCategories();
+      return data;
+    }
+const refreshBooks = () => {
+  getAllResults(authorId,categoryId,searchQuery);
+};
+    useEffect(()=>
+    {
+      getAllResults(authorId,categoryId,searchQuery);
+    },[authorId, categoryId, searchQuery])
+    
+    async function onClick(e) {
+      await setCategoryId(e.key)
+      await setAuthorId(e.key)
+          getAllResults(e.key+1, e.key+1, "");
+    } 
+async function deselectItem() {
+  await setCategoryId("");
+  await setAuthorId("");
+              getAllResults(authorId, categoryId, "");
+}
+        for(let i=0;i<janres.length;i++)
+          {
+            let children =
+            [
+              { key: `${i}`, label: `${janres[i].name}` },
+            ];
+            menuJanres=[...menuJanres,...children];
+          }
 
-    const onClick = (e) => {
-        };
+          for(let i=0;i<authors.length;i++)
+            {
+              let children =
+              [
+                { key: `${i}`, label: `${authors[i].firstName}  ${authors[i].lastName}` },
+              ];
+              menuAuthors=[...menuAuthors,...children];
+            }
+          
         const items= [
             {
               key: 'sub1',
@@ -52,13 +140,7 @@ import { useSelector } from 'react-redux';
                 {
                   key: 'g1',
                   type: 'group',
-                  children: 
-                  [
-                    {
-                      key:1,
-                      label:"jjdj"
-                    }
-                  ]
+                  children: menuAuthors
                 },
               ],
             },
@@ -66,18 +148,14 @@ import { useSelector } from 'react-redux';
               key: 'sub2',
               label: 'Janres',
               icon: <AppstoreOutlined />,
-              children: [
-                { key: '5', label: 'Option 5' },
-                { key: '6', label: 'Option 6' },
-              ],
+              children: menuJanres
             },
           ];
-        const onSearch = (value, _e, info) => console.log(info?.source, value);
-
-        const refreshBooks = () => {
-          getData();
-        };
-
+        const onSearch = (value) => 
+        {
+          setSearchQuery(value);
+          getAllResults(authorId, categoryId, value);
+        }
     return(<Layout
       style={{
         maxWidth:'100%',
@@ -92,7 +170,7 @@ import { useSelector } from 'react-redux';
  <Header
           style={{
             padding: 0,
-            background: 'yellow',
+            background: 'lightskyblue',
             maxWidth:'100%',
             width:'100%',
           }}
@@ -157,7 +235,8 @@ import { useSelector } from 'react-redux';
         alignItems='center' >
         <Menu
            id='Menu'
-           onClick={onClick}
+           onSelect={onClick}
+           onDeselect={deselectItem}
           mode="inline"
           multiple={true}
           items={items}
@@ -165,6 +244,8 @@ import { useSelector } from 'react-redux';
             padding: 0,
             margin: 0,
             height: 600,
+            overflow: 'auto'
+
           }}
         />   
         {!collapsed && 
@@ -189,11 +270,11 @@ import { useSelector } from 'react-redux';
       }
       >
 
-<Row justify='space-evenly' style={{top:0}}>
+<Row justify='start' style={{top:0, display:'inline-block'}}>
 {
-  currentPosts.map((book, index)=>
+  currentPosts.map((book)=>
   (
-    <BookData key={index} book={book} refreshBooks={refreshBooks}></BookData>
+    <BookData key={book.id} title={book.title} author={book.authorId} category={book.categoryId} id={book.id} description={book.description} refreshBooks={refreshBooks}></BookData>
   )
   )
 }
@@ -202,9 +283,7 @@ import { useSelector } from 'react-redux';
 style={{margin:20}}
 >+</Button> </Link>
 </Row>
-
 <Pagination totalPosts={data.length} postsPerPage={postPerPage} setCurrentPage={SetCurrentPage}></Pagination>
       </div>
-
     </Layout>);
   }

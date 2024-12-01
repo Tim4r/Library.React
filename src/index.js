@@ -1,27 +1,22 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import { BookList } from './BookList';
-import { Login } from './Login';
 import reportWebVitals from './reportWebVitals';
-import { Provider } from 'react-redux';
 import App from './App';
+import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import BooksReducer from './BooksReducer';
-import UserLibraryReducer from './UserLibraryReducer';
+import tokenUserReducer from './tokenSlice';
 const store = configureStore({
-  reducer:{
-    books:BooksReducer,
-    userBooks:UserLibraryReducer,
-  }
+    reducer:{
+        userToken: tokenUserReducer,
+    }
 })
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <Provider store={store}>
+<Provider store={store}>
 <App></App>
-    </Provider>
-  </React.StrictMode>
+</Provider>
+
+
 );
 reportWebVitals();

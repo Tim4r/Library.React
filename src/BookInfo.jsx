@@ -150,7 +150,7 @@ import { useNavigate } from 'react-router-dom';
         }}
         onClick={handleSubmit}
         >
-        Подтвердить изменения
+        Создать книгу
       </Button>
 
       <Input

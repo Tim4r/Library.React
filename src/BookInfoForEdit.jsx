@@ -1,6 +1,7 @@
 import { Button,Layout, Input,Select} from 'antd';
-import { Image, Card } from 'antd';
-import React, { useState } from 'react';
+import { Image, Card, Modal } from 'antd';
+import React, { useState, useEffect,useLayoutEffect} from 'react';
+import axios from 'axios';
 import { useDispatch,useSelector } from 'react-redux';
 import { updateBook } from './BooksReducer';
 import ящерка from './ящерка.png'
@@ -15,27 +16,103 @@ import { useNavigate, useParams } from 'react-router-dom';
 
   export function BookInfoForEdit()
   {
-    const books=useSelector((state)=>state.books);
-    const {id} = useParams();
-    const existingBook = books.filter(f=>f.id == id)
-    const {title,description,authorid,categoryid,isbn,img}=existingBook[0]
-    const [uname,setName] = useState(title)
-    const [ujenre,setJanre]=useState(categoryid)
-    const [uauthor,setAuthor] = useState(authorid)
-    const [uisbn,setISBN] = useState(isbn)
-    const [udescription,setDescription]=useState(description)
-    const dispatch=useDispatch();
-    
     const navigate=useNavigate();
+    const [data,SetData]=useState([]);
+      const {id} = useParams();
+      const url = `https://localhost:7190/api/UpdateBook?id=${id}`;
+
+      async function getPageOfResults(page, authorId = null, categoryId = null, searchQuery = "") {
+
+        const a = await axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`, {
+          params: { authorId, categoryId, searchQuery }
+        });
+        return a.data;
+      }
+
+      async function getAllResults() {
+        let data = [];
+        let lastResultsLength = 10;
+        let page = 1;
+        while (lastResultsLength === 10) {
+          const newResults = await getPageOfResults(page);
+          page++;
+          lastResultsLength = newResults.length;
+          data = Object.values(data.concat(newResults));
+        }
+        await SetData(data);
+        const books = data.find(book=>book.id === parseInt(id));
+        setJanre(books.categoryId);
+        setName(books.title);
+        setAuthor(books.authorId);
+        setISBN(books.isbn);
+        setDescription(books.description);
+        return data;
+      }
+      useEffect(()=>
+      {
+        getAllResults();
+      },[])
+
+      const [title,setName] = useState("loading...");
+      const [categoryId,setJanre]=useState("loading...");
+      const [authorId,setAuthor] = useState("loading...");
+      const [isbn,setISBN] = useState("loading...");
+      const [description,setDescription]=useState("loading...");
+
+      const [open, setOpen] = useState(false);
+      const [confirmLoading, setConfirmLoading] = useState(false);
+      const [modalText, setModalText] = useState('Are you sure you want to delete this book?');
     
-    const handleSubmit=(event)=>
+      const handleDelete = () => {
+        setOpen(true);
+      }
+    
+      const handleOk = () => {
+
+        setModalText('Deleting the book...');
+        setConfirmLoading(true);
+    
+        axios.delete(`https://localhost:7190/api/DeleteBook/?id=${id}`)
+          .then(() => {
+            setOpen(false);
+            setConfirmLoading(false);
+            getAllResults();
+          })
+          .catch((error) => {
+            console.error("There was an error deleting the book:", error);
+            setConfirmLoading(false);
+            setModalText('An error occurred. Please try again.');
+          });
+      }
+      const handleCancel = () => {
+        setOpen(false);
+      };
+    
+    const handleSubmit=()=>
     {
-      event.preventDefault();
-      dispatch(updateBook({id:id, title:uname, description:udescription, authorid:1, categoryid:2, isbn:uisbn,img:ящерка}))
-      navigate('/')
+      const data=
+      {
+        "title": title,
+        "isbn": isbn,
+        "description": description,
+        "image": null,
+        "authorId": authorId,
+        "categoryId": categoryId
+      }
+      axios.post(url, data, {});
+      navigate('/books')
     }
     return(
         <Layout>
+      <Modal
+        title="Delete Book"
+        open={open}
+        onOk={handleOk}
+        confirmLoading={confirmLoading}
+        onCancel={handleCancel}
+      >
+        <p>{modalText}</p>
+      </Modal>
         <Header
           style={{
             padding: 0,
@@ -99,13 +176,13 @@ import { useNavigate, useParams } from 'react-router-dom';
               }}
     />
     <div>
-    <Input value={uname} onChange={e=>setName(e.target.value)} style={{marginLeft:340, width:400, marginTop:30}} placeholder='name'></Input>
+    <Input value={title} onChange={e=>setName(e.target.value)} style={{marginLeft:340, width:400, marginTop:30}} placeholder='name'></Input>
     <br></br>
-      <Input value={ujenre} onChange={e=>setJanre(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='janre'></Input>
+      <Input value={categoryId} onChange={e=>setJanre(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='janre'></Input>
       <br></br>
-      <Input value={uauthor} onChange={e=>setAuthor(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='author'></Input>
+      <Input value={authorId} onChange={e=>setAuthor(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='author'></Input>
       <br></br>
-      <Input value={uisbn} onChange={e=>setISBN(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='ISBN'></Input>
+      <Input value={isbn} onChange={e=>setISBN(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='ISBN'></Input>
     </div>
 
 <Button color="primary" variant="solid"
@@ -116,6 +193,7 @@ import { useNavigate, useParams } from 'react-router-dom';
           marginLeft:50,
           width:130
         }}
+        onClick={() => handleDelete(id)}
         >
         Удалить
       </Button>
@@ -130,16 +208,17 @@ import { useNavigate, useParams } from 'react-router-dom';
         }}
         onClick={handleSubmit}
         >
-        Подтвердить изменения
+        Изменить
       </Button>
 
       <Input
       style={{marginLeft:50, position:'fixed',marginTop:150}}
       placeholder='desc'
-      value={udescription}
+      value={description}
       onChange={e=>setDescription(e.target.value)}
       ></Input>
     </div>
+    
 
     </Layout>
     )

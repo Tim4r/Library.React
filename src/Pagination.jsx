@@ -9,8 +9,8 @@ function Pagination({totalPosts,postsPerPage, setCurrentPage})
         pages.push(i);
     };
     return(
-        <div>
-            
+        <div
+        >
             {
                 pages.map((page,index)=>
                 {

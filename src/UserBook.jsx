@@ -7,17 +7,27 @@ import ящерка from './ящерка.png'
 
 export function UserBook (book){
   return(
-    <Layout>
-              <Card
-              key={book.id}
+    <Layout
     style={{
       width: 300,
-      overflow: 'visible',
-      height:300,
-      margin:20,
-      marginBottom:60,
-      top:0
+      height: 300,
+      margin: 20,
+      marginBottom: 30,
+      top: 0,
+      display: 'inline-flex',
+      background: 'white'
     }}
+    >
+              <Card
+   style={{
+    width: 300,
+    overflow: 'visible',
+    height: 300,
+    margin: 20,
+    marginBottom: 20,
+    top: 0,
+    flexGrow: 1,
+  }}
     cover={
       <img
         alt="example"

@@ -24,7 +24,7 @@ import { useSelector } from 'react-redux';
     const [collapsed, setCollapsed] = useState(false);
     const [data,SetData]=useState([]);
     const [currentPage,SetCurrentPage]=useState(1);
-    const [postPerPage,setPostPerPage]=useState(8);
+    const [postPerPage,setPostPerPage]=useState(4);
     const lastPostIndex=currentPage * postPerPage;
     const firstPostIndex=lastPostIndex-postPerPage;
     const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);

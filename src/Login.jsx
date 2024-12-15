@@ -4,7 +4,8 @@ import { useEffect, useState} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { useSelector,useDispatch } from 'react-redux';
-import { setUserToken } from './tokenSlice';
+import { store } from './Store';
+import { setRefreshToken,setAccessToken,setExpDate } from './tokenSlice';
 import axios from 'axios';
 export function Login (){
     const navigate=useNavigate();
@@ -25,7 +26,8 @@ export function Login (){
                     axios.post("https://localhost:7190/api/Account/Login",data).then((result)=> {
 
 
-                    dispatch(setUserToken(result.data.accessToken));
+                    dispatch(setAccessToken(result.data.accessToken));
+                    dispatch(setRefreshToken(result.data.refreshToken));
                       if(jwtDecode(result.data.accessToken).role === "Admin")
                       {
                         navigate("/books");

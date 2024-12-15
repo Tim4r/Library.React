@@ -2,6 +2,9 @@
 import { Button, Layout, Menu, Table, Col, Input, Row } from 'antd';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSelector, useDispatch } from 'react-redux';
+import { setAccessToken, setExpDate, setRefreshToken } from './tokenSlice';
+import { store } from './Store';
 import Pagination from './Pagination';
 import { UserBook } from './UserBook';
 import {
@@ -19,6 +22,11 @@ const { Search } = Input;
 export function BookListUser() {
 
   const {id} = useParams();
+  const accessToken = useSelector((state) => state.userToken.accessToken);
+  const refreshToken = useSelector((state) => state.userToken.refreshToken);
+  // const expDate = useSelector((state) => state.userToken.expDate);
+  const dispatch = useDispatch();
+
     const navigate = useNavigate();
     const [collapsed, setCollapsed] = useState(false);
     const [data,SetData]=useState([]);
@@ -27,37 +35,39 @@ export function BookListUser() {
     const lastPostIndex=currentPage * postPerPage;
     const firstPostIndex=lastPostIndex-postPerPage;
     const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);
-    const [janres,SetJanres]=useState([]);
-    const [authors,SetAuthors]=useState([]);
-
-    const [authorId, setAuthorId] = useState(null);
-    const [categoryId, setCategoryId] = useState(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    var menuJanres =[];
-    var menuAuthors=[];
+    const date = new Date(Date.now());
+    date.setMinutes(date.getMinutes() + 1);
+    dispatch(setExpDate(date.toString()));
 
 
-    async function getPageOfResults(page, authorId = null, categoryId = null, searchQuery = "") {
-  
-      const a = await axios.get(`https://localhost:7190/api/GetBookLoansByUserId?userId=${id}`);
-        axios.get("https://localhost:7190/api/GetAllGenresOfBooks").then((result)=>
-          {
-            SetJanres(result.data);
-          });
-
-          axios.get(`https://localhost:7190/api/GetAllAuthors?pageNumber=1&pageSize=10`).then((result)=>
-            {
-              SetAuthors(result.data);
-            });
-        return a.data;
+    async function getPageOfResults(page) {
+      var c ="";
+      if (Date.now() >= date) {
+        await axios.post("https://localhost:7190/api/Account/RefreshToken",{"token": `${refreshToken}`}).then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          date.setMinutes(date.getMinutes() + 1);
+          dispatch(setExpDate(date));
+        });
+         c = await axios.get(`https://localhost:7190/api/GetBookLoansByUserId?userId=${id}`,{headers: {
+          'Authorization': 'Bearer ' + store.getState().userToken.accessToken
+        }});
+      }
+      else{
+          c = await axios.get(`https://localhost:7190/api/GetBookLoansByUserId?userId=${id}`,{headers: {
+            'Authorization': 'Bearer ' + store.getState().userToken.accessToken
+          }});
+      }
+    
+        return c.data;
     }
 
-  async function getAllResults(authorId, categoryId, searchQuery) {
+  async function getAllResults() {
     let data = [];
     let lastResultsLength = 10;
     let page = 1;
     while (lastResultsLength === 10) {
-        const newResults = await getPageOfResults(page,authorId,categoryId,searchQuery);
+        const newResults = await getPageOfResults(page);
         page++;
         lastResultsLength = newResults.length;
         data = Object.values(data.concat(newResults));
@@ -68,36 +78,8 @@ export function BookListUser() {
 
     useEffect(()=>
     {
-      getAllResults(authorId,categoryId,searchQuery);
-    },[authorId, categoryId, searchQuery])
-    async function onClick(e) {
-      await setCategoryId(e.key)
-      await setAuthorId(e.key)
-          getAllResults(e.key+1, e.key+1, "");
-    } 
-async function deselectItem() {
-  await setCategoryId("");
-  await setAuthorId("");
-              getAllResults(authorId, categoryId, "");
-}
-        for(let i=0;i<janres.length;i++)
-          {
-            let children =
-            [
-              { key: `${i}`, label: `${janres[i].name}` },
-            ];
-            menuJanres=[...menuJanres,...children];
-          }
-
-          for(let i=0;i<authors.length;i++)
-            {
-              console.log(authors[i].firstName);
-              let children =
-              [
-                { key: `${i}`, label: `${authors[i].firstName}  ${authors[i].lastName}` },
-              ];
-              menuAuthors=[...menuAuthors,...children];
-            }
+      getAllResults();
+    },[])
           
         const items= [
             {
@@ -108,7 +90,6 @@ async function deselectItem() {
                 {
                   key: 'g1',
                   type: 'group',
-                  children: menuAuthors
                 },
               ],
             },
@@ -116,14 +97,8 @@ async function deselectItem() {
               key: 'sub2',
               label: 'Janres',
               icon: <AppstoreOutlined />,
-              children: menuJanres
             },
           ];
-        const onSearch = (value) => 
-        {
-          setSearchQuery(value);
-          getAllResults(authorId, categoryId, value);
-        }
   return (
     <Layout
       style={{
@@ -146,7 +121,6 @@ async function deselectItem() {
       >
         <Search
           placeholder="input search text"
-          onSearch={onSearch}
           style={{
             display: 'flex',
             width: 500,
@@ -201,12 +175,10 @@ async function deselectItem() {
         />
       </Header>
 
-      <Sider trigger={null} collapsible collapsed={collapsed} display='flex' theme='light'
+      <Sider trigger={null} collapsible collapsed={true} display='flex' theme='light'
         alignItems='center' >
         <Menu
           id='Menu'
-          onSelect={onClick}
-           onDeselect={deselectItem}
           mode="inline"
           multiple={true}
           items={items}

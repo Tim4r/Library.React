@@ -2,17 +2,27 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState=
 {
-    token:'12345'
+    accessToken:'12345',
+    refreshToken:'123456',
+    expDate:""
 }
 export const tokenSliceUser = createSlice({
     name:"tokenUser",
     initialState,
     reducers:{
-        setUserToken:(state,action)=>
+        setAccessToken:(state,action)=>
         {
-            state.token = action.payload;
+            state.accessToken = action.payload;
         },
+        setRefreshToken:(state,action)=>
+            {
+                state.refreshToken = action.payload;
+            },
+            setExpDate:(state,action)=>
+                {
+                    state.expDate = action.payload;
+                },
     }
 })
-export const {setUserToken} = tokenSliceUser.actions;
+export const {setAccessToken,setRefreshToken,setExpDate} = tokenSliceUser.actions;
 export default tokenSliceUser.reducer;

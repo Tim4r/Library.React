@@ -1,3 +1,6 @@
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min';
+import "./global.css";
 import React from 'react'
 import { BookList } from './BookList'
 import { BookInfo } from './BookInfo'

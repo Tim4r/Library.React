@@ -1,289 +1,427 @@
-
-import { Button,Layout, Menu, Table,Col , Input, Row} from 'antd';
-import React, { useState,useEffect } from 'react';
-import Pagination from './Pagination';
-import { BookData } from './BookData';
-import axios from 'axios';
-
-import { Link, useNavigate } from 'react-router-dom';
+import { Button, Layout, Menu, Table, Col, Input, Row, Pagination } from "antd";
+import React, { useState, useEffect } from "react";
+import { BookData } from "./BookData";
+import axios from "axios";
+import { store } from "./Store";
+import { Link, useNavigate } from "react-router-dom";
 import {
-    MenuFoldOutlined,
-    MenuUnfoldOutlined,
-    TableOutlined,
-    AppstoreOutlined,
-    ContactsOutlined,
-    PoweroffOutlined,
-    PlusOutlined
-  } from '@ant-design/icons';
-import { useSelector } from 'react-redux';
-  const { Header, Sider} = Layout;
-  const { Search } = Input;
-  export function BookList()
-  {
-    const token = useSelector((state)=>state.userToken.token);
-    const [collapsed, setCollapsed] = useState(false);
-    const [data,SetData]=useState([]);
-    const [currentPage,SetCurrentPage]=useState(1);
-    const [postPerPage,setPostPerPage]=useState(4);
-    const lastPostIndex=currentPage * postPerPage;
-    const firstPostIndex=lastPostIndex-postPerPage;
-    const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);
-    const [janres,SetJanres]=useState([]);
-    const [authors,SetAuthors]=useState([]);
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  TableOutlined,
+  AppstoreOutlined,
+  ContactsOutlined,
+  PoweroffOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import { useSelector, useDispatch } from "react-redux";
+import { setAccessToken, setExpDate, setRefreshToken } from "./tokenSlice";
+const { Header, Sider } = Layout;
+const { Search } = Input;
+export function BookList() {
+  const accessToken = useSelector((state) => state.userToken.accessToken);
+  const refreshToken = useSelector((state) => state.userToken.refreshToken);
+  // const expDate = useSelector((state) => state.userToken.expDate);
+  const dispatch = useDispatch();
+  const [collapsed, setCollapsed] = useState(false);
+  const [data, SetData] = useState([]);
+  const [currentPage, SetCurrentPage] = useState(1);
+  const [postPerPage, setPostPerPage] = useState(8);
+  const lastPostIndex = currentPage * postPerPage;
+  const firstPostIndex = lastPostIndex - postPerPage;
+  const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);
+  const [janres, SetJanres] = useState([]);
+  const [authors, SetAuthors] = useState([]);
 
-    const [authorId, setAuthorId] = useState(null);
-    const [categoryId, setCategoryId] = useState(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    var menuJanres =[];
-    var menuAuthors=[];
+  const [authorId, setAuthorId] = useState(null);
+  const [categoryId, setCategoryId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  var menuJanres = [];
+  var menuAuthors = [];
 
-    async function getPageOfResults(page, authorId = null, categoryId = null, searchQuery = "") {
+  const date = new Date(Date.now());
+  date.setMinutes(date.getMinutes() + 1);
+  dispatch(setExpDate(date.toString()));
+  const navigate = useNavigate();
 
-      const a = await axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`, {
-        params: { authorId, categoryId, searchQuery },
-        headers: {
-          'Authorization': 'Bearer ' + token
-        }
-      }).catch((err) => { 
-        axios.post("https://localhost:7190/api/Account/RefreshToken", refreshToken).then((result)=>
-        {
-          dispatch(setUserToken(result.data.accessToken));
-          dispatch(setUserToken(result.data.refreshToken));
+  async function getPageOfResults(page, authorId, categoryId, searchQuery) {
+    var c = "";
+    if (Date.now() >= date) {
+      await axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${refreshToken}`,
         })
-      });
-      return a.data;
-    }
-  
-    async function getPageOfAuthors(page) {
-      const b = await axios.get(`https://localhost:7190/api/GetAllAuthors?pageNumber=${page}&pageSize=10`,
-        {headers: {
-          'Authorization': 'Bearer ' + token
-        }}
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          date.setMinutes(date.getMinutes() + 1);
+          dispatch(setExpDate(date));
+        });
+      c = await axios.get(
+        `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
+        {
+          params: { authorId, categoryId, searchQuery },
+          headers: {
+            Authorization: "Bearer " + store.getState().userToken.accessToken,
+          },
+        }
       );
-      return b.data;
+    } else {
+      c = await axios.get(
+        `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
+        {
+          params: { authorId, categoryId, searchQuery },
+          headers: {
+            Authorization: "Bearer " + store.getState().userToken.accessToken,
+          },
+        }
+      );
     }
-  
-    async function getPageOfCategories() {
-      axios.get("https://localhost:7190/api/GetAllGenresOfBooks", {headers: {
-        'Authorization': 'Bearer ' + token
-      }}).then((result) => {
+    return c.data;
+  }
+
+  async function getPageOfAuthors(page) {
+    const b = await axios.get(
+      `https://localhost:7190/api/GetAllAuthors?pageNumber=${page}&pageSize=10`,
+      {
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
+      }
+    );
+    return b.data;
+  }
+
+  async function getPageOfCategories() {
+    axios
+      .get("https://localhost:7190/api/GetAllGenresOfBooks", {
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
+      })
+      .then((result) => {
         SetJanres(result.data);
       });
-  
+  }
+  async function getAllResults(authorId, categoryId, searchQuery) {
+    let data = [];
+    let dataA = [];
+    let lastResultsLength = 10;
+    let lastResultsLengthA = 10;
+    let page = 1;
+    let pageA = 1;
+    while (lastResultsLength === 10) {
+      const newResults = await getPageOfResults(
+        page,
+        authorId,
+        categoryId,
+        searchQuery
+      );
+      page++;
+      lastResultsLength = newResults.length;
+      data = Object.values(data.concat(newResults));
     }
-    async function getAllResults(authorId, categoryId, searchQuery) {
-      let data = [];
-      let dataA = [];
-      let lastResultsLength = 10;
-      let lastResultsLengthA = 10;
-      let page = 1;
-      let pageA = 1;
-      while (lastResultsLength === 10) {
-        const newResults = await getPageOfResults(page, authorId, categoryId, searchQuery);
-        page++;
-        lastResultsLength = newResults.length;
-        data = Object.values(data.concat(newResults));
-      }
-      while (lastResultsLengthA === 10) {
-        const newResults = await getPageOfAuthors(pageA);
-        pageA++;
-        lastResultsLengthA = newResults.length;
-        dataA = Object.values(dataA.concat(newResults));
-      }
-      await SetData(data);
-      await SetAuthors(dataA);
-      await getPageOfCategories();
-      return data;
+    while (lastResultsLengthA === 10) {
+      const newResults = await getPageOfAuthors(pageA);
+      pageA++;
+      lastResultsLengthA = newResults.length;
+      dataA = Object.values(dataA.concat(newResults));
     }
-const refreshBooks = () => {
-  getAllResults(authorId,categoryId,searchQuery);
-};
-    useEffect(()=>
-    {
-      getAllResults(authorId,categoryId,searchQuery);
-    },[authorId, categoryId, searchQuery])
-    
-    async function onClick(e) {
-      await setCategoryId(e.key)
-      await setAuthorId(e.key)
-          getAllResults(e.key+1, e.key+1, "");
-    } 
-async function deselectItem() {
-  await setCategoryId("");
-  await setAuthorId("");
-              getAllResults(authorId, categoryId, "");
-}
-        for(let i=0;i<janres.length;i++)
-          {
-            let children =
-            [
-              { key: `${i}`, label: `${janres[i].name}` },
-            ];
-            menuJanres=[...menuJanres,...children];
-          }
+    await SetData(data);
+    await SetAuthors(dataA);
+    await getPageOfCategories();
+    return data;
+  }
+  const refreshBooks = () => {
+    getAllResults(authorId, categoryId, searchQuery);
+  };
+  const onSearch = (value) => {
+    setSearchQuery(value);
+    getAllResults(authorId, categoryId, value);
+  };
+  async function onClick(e) {
+    if (e.keyPath[1] === "sub2") {
+      getAllResults("", parseInt(e.key) + 1, "");
+    } else {
+      getAllResults(parseInt(e.key) + 1, "", "");
+    }
+    await setCategoryId(parseInt(e.key) + 1);
+    await setAuthorId(parseInt(e.key) + 1);
+  }
+  async function deselectItem() {
+    await setCategoryId("");
+    await setAuthorId("");
+    getAllResults("", "", "");
+  }
 
-          for(let i=0;i<authors.length;i++)
-            {
-              let children =
-              [
-                { key: `${i}`, label: `${authors[i].firstName}  ${authors[i].lastName}` },
-              ];
-              menuAuthors=[...menuAuthors,...children];
-            }
-          
-        const items= [
-            {
-              key: 'sub1',
-              label: 'Authors',
-              icon: <ContactsOutlined />,
-              children: [
-                {
-                  key: 'g1',
-                  type: 'group',
-                  children: menuAuthors
-                },
-              ],
-            },
-            {
-              key: 'sub2',
-              label: 'Janres',
-              icon: <AppstoreOutlined />,
-              children: menuJanres
-            },
-          ];
-        const onSearch = (value) => 
+  useEffect(() => {
+    if (Date.now() > date) {
+      axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${refreshToken}`,
+        })
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          date.setMinutes(date.getMinutes() + 1);
+          dispatch(setExpDate(date));
+        });
+      getAllResults(authorId, categoryId, searchQuery);
+    } else {
+      getAllResults(authorId, categoryId, searchQuery);
+    }
+  }, [refreshToken, accessToken, dispatch]);
+
+  for (let i = 0; i < janres.length; i++) {
+    let children = [{ key: `${i}`, label: `${janres[i].name}` }];
+    menuJanres = [...menuJanres, ...children];
+  }
+
+  for (let i = 0; i < authors.length; i++) {
+    let children = [
+      { key: `${i}`, label: `${authors[i].firstName}  ${authors[i].lastName}` },
+    ];
+    menuAuthors = [...menuAuthors, ...children];
+  }
+
+  const items = [
+    {
+      key: "sub1",
+      label: "Authors",
+      icon: <ContactsOutlined />,
+      children: [
         {
-          setSearchQuery(value);
-          getAllResults(authorId, categoryId, value);
-        }
-    return(<Layout
+          key: "g1",
+          type: "group",
+          children: menuAuthors,
+        },
+      ],
+    },
+    {
+      key: "sub2",
+      label: "Janres",
+      icon: <AppstoreOutlined />,
+      children: menuJanres,
+    },
+  ];
+
+  return (
+    <Layout
       style={{
-        maxWidth:'100%',
-        display:'flex',
-        flexWrap: 'wrap',
-        background: 'white',
-        overflow: 'hidden',
-      height: '100vh'
+        maxWidth: "100%",
+        display: "flex",
+        flexWrap: "wrap",
+        background: "white",
+        overflow: "hidden",
       }}
     >
-
- <Header
+      <Header
+        style={{
+          padding: 0,
+          background: "lightskyblue",
+          maxWidth: "100%",
+          width: "100%",
+        }}
+      >
+        <Search
+          placeholder="input search text"
+          onSearch={onSearch}
           style={{
+            display: "flex",
+            width: 500,
             padding: 0,
-            background: 'lightskyblue',
-            maxWidth:'100%',
-            width:'100%',
+            marginLeft: 450,
+            marginTop: 15,
           }}
-        >
-          <Search
-      placeholder="input search text"
-      onSearch={onSearch}
-      style={{
-        display:'flex',
-        width: 500,
-        padding:0,
-        marginLeft:450,
-        marginTop:15
-      }}
-           />
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            style={{
-              fontSize: '16px',
-              position:'fixed',
-              top:0,
-              width: 64,
-              height: 64,
-              padding:0,
-              marginLeft:10,
-              
-                    }}
-          />
-          <TableOutlined style={{
-              position:'fixed',
-              top:0,
-              width: 64,
-              height: 64,
-              padding:0,
-              marginLeft:1300,
-                    }}></TableOutlined>
-
-          <p style={{
-              fontSize: '12px',
-              position:'fixed',
-              top:0,
-              marginLeft:1400,
-              marginTop:0
-                    }}>USERNAME</p>
-
-
-          <PoweroffOutlined 
+        />
+        <Button
+          type="text"
+          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          onClick={() => setCollapsed(!collapsed)}
           style={{
-            position:'fixed',
-              top:0,
-              width: 64,
-              height: 64,
-              padding:0,
-            marginLeft:1500
-                  }}
-          />
-    </Header>
+            fontSize: "16px",
+            position: "fixed",
+            top: 0,
+            width: 64,
+            height: 64,
+            padding: 0,
+            marginLeft: 10,
+          }}
+        />
+        <TableOutlined
+          style={{
+            position: "fixed",
+            top: 0,
+            width: 64,
+            height: 64,
+            padding: 0,
+            marginLeft: 1300,
+          }}
+        ></TableOutlined>
 
-        <Sider trigger={null} collapsible collapsed={collapsed} display='flex' theme='light'
-        alignItems='center' >
+        <p
+          style={{
+            fontSize: "12px",
+            position: "fixed",
+            top: 0,
+            marginLeft: 1400,
+            marginTop: 0,
+          }}
+        ></p>
+
+        <PoweroffOutlined
+          style={{
+            position: "fixed",
+            top: 0,
+            width: 64,
+            height: 64,
+            padding: 0,
+            marginLeft: 1500,
+          }}
+          onClick={() => {
+            navigate("/");
+          }}
+        />
+      </Header>
+
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        display="flex"
+        theme="light"
+        alignItems="center"
+      >
+        <div style={{ padding: "20px", textAlign: "center" }}>
+          <Button
+            type="primary"
+            style={{
+              marginRight: 10,
+              backgroundColor: "#91caff",
+              borderColor: "#91caff",
+              color: "#fff",
+            }}
+            hover={{
+              backgroundColor: "#40a9ff",
+              borderColor: "#40a9ff",
+            }}
+            icon={<PlusOutlined />}
+            onClick={() => navigate("/create")}
+          >
+            Add new book
+          </Button>
+        </div>
+
         <Menu
-           id='Menu'
-           onSelect={onClick}
-           onDeselect={deselectItem}
+          id="Menu"
+          onSelect={onClick}
+          onDeselect={deselectItem}
           mode="inline"
           multiple={true}
           items={items}
           style={{
             padding: 0,
             margin: 0,
-            height: 600,
-            overflow: 'auto'
-
+            height: 700,
+            overflow: "auto",
+            border: 1
           }}
-        />   
-        {!collapsed && 
-        <Button color="primary" variant="solid"
-        style={{
-          padding: 0,
-          margin: 50,
-        }}
-        >
-        Применить
-      </Button> }
-
+        />
       </Sider>
-      <div
-      style={
-        {
-          marginLeft:200,
-          marginTop:64,
-          top:0,
-          position:'fixed',
-        }
-      }
-      >
 
-<Row justify='start' style={{top:0, display:'inline-block'}}>
-{
-  currentPosts.map((book)=>
-  (
-    <BookData key={book.id} title={book.title} author={book.authorId} category={book.categoryId} id={book.id} description={book.description} refreshBooks={refreshBooks}></BookData>
-  )
-  )
-}
-<Link to="/create">
-<Button
-style={{margin:20}}
->+</Button> </Link>
-</Row>
-<Pagination totalPosts={data.length} postsPerPage={postPerPage} setCurrentPage={SetCurrentPage}></Pagination>
+      <div
+        style={{
+          marginLeft: 200,
+          marginTop: 64,
+          top: 0,
+          position: "fixed",
+        }}
+      >
+        <Row justify="start" style={{ top: 0, display: "inline-block" }}>
+          {currentPosts.map((book) => {
+            const authorName = book.author
+              ? `${book.author.firstName} ${book.author.lastName}`
+              : "Unknown Author";
+
+            return (
+              <BookData
+                key={book.id}
+                title={book.title}
+                authorName={authorName}
+                category={book.genreId}
+                id={book.id}
+                description={book.description}
+                refreshBooks={refreshBooks}
+                image={book.image}
+              />
+            );
+          })}
+        </Row>
+
+        <div
+          style={{ display: "flex", justifyContent: "center", marginTop: 20 }}
+        >
+          <Pagination
+            total={data.length}
+            pageSize={postPerPage}
+            onChange={(page) => SetCurrentPage(page)}
+            showSizeChanger={false}
+            itemRender={(page, type, originalElement) => {
+              if (type === "prev") {
+                return (
+                  <Button
+                    type="primary"
+                    style={{
+                      marginRight: 10,
+                      backgroundColor: "#91caff",
+                      borderColor: "#91caff",
+                      color: "#fff",
+                    }}
+                    hover={{
+                      backgroundColor: "#40a9ff",
+                      borderColor: "#40a9ff",
+                    }}
+                  >
+                    Previous
+                  </Button>
+                );
+              }
+              if (type === "next") {
+                return (
+                  <Button
+                    type="primary"
+                    style={{
+                      marginLeft: 10,
+                      backgroundColor: "#91caff",
+                      borderColor: "#91caff",
+                      color: "#fff",
+                    }}
+                    hover={{
+                      backgroundColor: "#40a9ff",
+                      borderColor: "#40a9ff",
+                    }}
+                  >
+                    Next
+                  </Button>
+                );
+              }
+              if (type === "page") {
+                return (
+                  <span
+                    style={{
+                      color: page === currentPage ? "#096dd9" : "#595959",
+                      cursor: "pointer",
+                      transition: "background-color 0.3s, border-color 0.3s",
+                    }}
+                  >
+                    {page}
+                  </span>
+                );
+              }
+              return originalElement;
+            }}
+          />
+        </div>
       </div>
-    </Layout>);
-  }
+    </Layout>
+  );
+}

@@ -1,35 +1,37 @@
+import { Layout } from "antd";
+import { Card, Modal, Image } from "antd";
+import React, { useState } from "react";
+import axios from "axios";
+import { store } from "./Store";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Link } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 
-import { Layout } from 'antd';
-import { Avatar, Card, Modal } from 'antd';
-import ящерка from './ящерка.png'
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import {
-  EditOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons';
-import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-const { Header, Sider } = Layout;
 const { Meta } = Card;
 
-export function BookData(book, refreshBooks) {
-  const token = useSelector((state)=>state.userToken.token);
+export function BookData({ title, authorName, id, refreshBooks, image }) {
+  const accessToken = useSelector((state) => state.userToken.accessToken);
+  const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [modalText, setModalText] = useState('Are you sure you want to delete this book?');
+  const [modalText, setModalText] = useState(
+    "Are you sure you want to delete this book?"
+  );
 
   const handleDelete = () => {
     setOpen(true);
   };
 
   const handleOk = () => {
-    setModalText('Deleting the book...');
+    setModalText("Deleting the book...");
     setConfirmLoading(true);
 
-    axios.delete(`https://localhost:7190/api/DeleteBook/?id=${book.id}`, {headers: {
-      'Authorization': 'Bearer ' + token
-    }})
+    axios
+      .delete(`https://localhost:7190/api/DeleteBook/?id=${id}`, {
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
+      })
       .then(() => {
         setOpen(false);
         setConfirmLoading(false);
@@ -38,7 +40,7 @@ export function BookData(book, refreshBooks) {
       .catch((error) => {
         console.error("There was an error deleting the book:", error);
         setConfirmLoading(false);
-        setModalText('An error occurred. Please try again.');
+        setModalText("An error occurred. Please try again.");
       });
   };
 
@@ -47,44 +49,108 @@ export function BookData(book, refreshBooks) {
   };
 
   return (
-
-    <Layout
-      style={{
-        width: 300,
-        height: 300,
-        margin: 20,
-        marginBottom: 30,
-        top: 0,
-        display: 'inline-flex',
-        background: 'white'
-      }}
-    >
-      <Card
-        key={book.id}
+    <Layout className="layout">
+      <div
         style={{
-          width: 300,
-          overflow: 'visible',
-          height: 300,
-          marginBottom: 20,
-          top: 0,
-          flexGrow: 1,
+          width: "100%",
+          height: 320,
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          position: "relative",
+          overflow: "hidden",
+          backgroundColor: "#fff",
         }}
-        cover={
-          <img
-            alt="example"
-            src={ящерка}
-          />
-        }
-        actions={[
-          <DeleteOutlined key="delete" onClick={() => handleDelete(book.id)} />,
-          <Link to={`/edit/${book.id}`}><EditOutlined /></Link>,
-        ]}
       >
-        <Meta
-          title={book.title}
-          description={book.author}
+        <Card
+          key={id}
+          style={{
+            width: "100%",
+            height: "100%",
+            marginBottom: 0,
+            overflow: "visible",
+            border: "none",
+          }}
+          cover={
+            <div
+              style={{
+                width: "100%",
+                height: 221,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                alignContent: "center",
+                backgroundColor: "#fff",
+              }}
+            >
+              {image ? (
+                <Image
+                  src={image}
+                  alt="Book Cover"
+                  preview={false}
+                  style={{
+                    width: "70%",
+                    height: "70%",
+                    objectFit: "contain",
+                    maxWidth: 216,
+                    maxHeight: 221,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 150,
+                    height: 170,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px dashed #ccc",
+                    color: "#888",
+                    backgroundColor: "#f0f0f0",
+                  }}
+                >
+                  No Image
+                </div>
+              )}
+            </div>
+          }
+        >
+          <Meta title={title} description={authorName} />
+        </Card>
+
+        <Link to={`/edit/${id}`}>
+          <EditOutlined
+            style={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              fontSize: 16,
+              color: "#1890ff",
+              backgroundColor: "#fff",
+              borderRadius: "50%",
+              padding: 4,
+              boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+              cursor: "pointer",
+            }}
+          />
+        </Link>
+
+        <DeleteOutlined
+          onClick={() => handleDelete(id)}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            fontSize: 16,
+            color: "#ff4d4f",
+            backgroundColor: "#fff",
+            borderRadius: "50%",
+            padding: 4,
+            boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+            cursor: "pointer",
+          }}
         />
-      </Card>
+      </div>
+
       <Modal
         title="Delete Book"
         open={open}
@@ -95,6 +161,5 @@ export function BookData(book, refreshBooks) {
         <p>{modalText}</p>
       </Modal>
     </Layout>
-
-  )
-};
+  );
+}

@@ -18,7 +18,7 @@ export function Registration (){
                   "email":email,
                   "password": password
             }
-                    axios.post("https://localhost:7190/api/Authentification/Register",data).then((result)=> {
+                    axios.post("https://localhost:7190/api/Account/Register",data).then((result)=> {
                         message.info("succesfully register!");
                        navigate(`/`)
                     }).catch((err)=>

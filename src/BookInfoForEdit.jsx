@@ -2,8 +2,10 @@ import { Button,Layout, Input,Select} from 'antd';
 import { Image, Card, Modal } from 'antd';
 import React, { useState, useEffect,useLayoutEffect} from 'react';
 import axios from 'axios';
+
+import { store } from './Store';
 import { useDispatch,useSelector } from 'react-redux';
-import { updateBook } from './BooksReducer';
+import { setAccessToken, setRefreshToken } from './tokenSlice';
 import ящерка from './ящерка.png'
 import {
     TableOutlined,
@@ -16,17 +18,24 @@ import { useNavigate, useParams } from 'react-router-dom';
 
   export function BookInfoForEdit()
   {
+    const accessToken = useSelector((state)=>state.userToken.accessToken);
+    const refreshToken = useSelector((state)=>state.userToken.refreshToken);
+    const dispatch = useDispatch();
+    const [selectedImage, setSelectedImage] = useState(null);
     const navigate=useNavigate();
     const [data,SetData]=useState([]);
       const {id} = useParams();
       const url = `https://localhost:7190/api/UpdateBook?id=${id}`;
 
       async function getPageOfResults(page, authorId = null, categoryId = null, searchQuery = "") {
-
-        const a = await axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`, {
-          params: { authorId, categoryId, searchQuery }
+        var c ="";
+        c = await axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`, {
+          params: { authorId, categoryId, searchQuery },
+          headers: {
+            'Authorization': 'Bearer ' + store.getState().userToken.accessToken
+          }
         });
-        return a.data;
+        return c.data;
       }
 
       async function getAllResults() {
@@ -41,7 +50,7 @@ import { useNavigate, useParams } from 'react-router-dom';
         }
         await SetData(data);
         const books = data.find(book=>book.id === parseInt(id));
-        setJanre(books.categoryId);
+        setJanre(books.genreId);
         setName(books.title);
         setAuthor(books.authorId);
         setISBN(books.isbn);
@@ -52,6 +61,13 @@ import { useNavigate, useParams } from 'react-router-dom';
       {
         getAllResults();
       },[])
+      const handleImageChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const imageUrl = URL.createObjectURL(file); // Create a temporary URL for the selected file
+          setSelectedImage(imageUrl);
+        }
+      };
 
       const [title,setName] = useState("loading...");
       const [categoryId,setJanre]=useState("loading...");
@@ -72,7 +88,9 @@ import { useNavigate, useParams } from 'react-router-dom';
         setModalText('Deleting the book...');
         setConfirmLoading(true);
     
-        axios.delete(`https://localhost:7190/api/DeleteBook/?id=${id}`)
+        axios.delete(`https://localhost:7190/api/DeleteBook/?id=${id}`,{headers: {
+          'Authorization': 'Bearer ' + store.getState().userToken.accessToken
+        }})
           .then(() => {
             setOpen(false);
             setConfirmLoading(false);
@@ -97,9 +115,11 @@ import { useNavigate, useParams } from 'react-router-dom';
         "description": description,
         "image": null,
         "authorId": authorId,
-        "categoryId": categoryId
+        "genreId": categoryId
       }
-      axios.post(url, data, {});
+      axios.post(url, data, {headers: {
+        'Authorization': 'Bearer ' + accessToken
+      }});
       navigate('/books')
     }
     return(
@@ -116,7 +136,7 @@ import { useNavigate, useParams } from 'react-router-dom';
         <Header
           style={{
             padding: 0,
-            background: 'yellow',
+            background: 'lightskyblue',
             maxWidth:'100%',
             width:'100%',
           }}
@@ -217,6 +237,14 @@ import { useNavigate, useParams } from 'react-router-dom';
       value={description}
       onChange={e=>setDescription(e.target.value)}
       ></Input>
+
+             <Input
+      style={{marginLeft:50, position:'fixed',marginTop:200}}
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          id="imageUploader"
+        ></Input> 
     </div>
     
 

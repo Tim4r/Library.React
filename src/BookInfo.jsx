@@ -7,7 +7,8 @@ import { store } from "./Store";
 import { TableOutlined, PoweroffOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
-const { Header, Sider } = Layout;
+
+const { Header } = Layout;
 const { Meta } = Card;
 const { Search } = Input;
 const { TextArea } = Input;
@@ -20,11 +21,13 @@ export function BookInfo() {
   const refreshToken = useSelector((state) => state.userToken.refreshToken);
   const expDate = useSelector((state) => state.userToken.expDate);
   const dispatch = useDispatch();
-  const [title, SetTitle] = useState();
-  const [isbn, SetIsbn] = useState();
-  const [authorId, SetAuthor] = useState();
-  const [genreId, SetGenreId] = useState();
-  const [description, SetDescription] = useState();
+
+  const [title, SetTitle] = useState("");
+  const [isbn, SetIsbn] = useState("");
+  const [authorId, SetAuthor] = useState("");
+  const [genreId, SetGenreId] = useState("");
+  const [description, SetDescription] = useState("");
+
   const date = new Date(expDate);
 
   const handleImageChange = (event) => {
@@ -47,54 +50,55 @@ export function BookInfo() {
   };
 
   async function handleSubmit(event) {
-    if (Date.now() > date) {
-      await axios
-        .post("https://localhost:7190/api/Account/RefreshToken", {
-          token: `${refreshToken}`,
-        })
-        .then((result) => {
-          dispatch(setAccessToken(result.data.accessToken));
-          dispatch(setRefreshToken(result.data.refreshToken));
-          date.setMinutes(date.getMinutes() + 1);
-          dispatch(setExpDate(date));
-        });
+    event.preventDefault();
 
-      const url = "https://localhost:7190/api/CreateBook";
-      const data = {
-        title: title,
-        isbn: isbn,
-        authorId: parseInt(authorId),
-        genreId: parseInt(genreId),
-        description: description,
-        image: imageBase64 || null,
-      };
+    if (Date.now() > date.getTime()) {
+      try {
+        const refreshResponse = await axios.post(
+          "https://localhost:7190/api/Account/RefreshToken",
+          {
+            token: refreshToken,
+          }
+        );
 
-      axios
-        .post(url, data, {
-          headers: {
-            Authorization: "Bearer " + store.getState().userToken.accessToken,
-          },
-        })
-        .then((result) => {});
+        dispatch(setAccessToken(refreshResponse.data.accessToken));
+        dispatch(setRefreshToken(refreshResponse.data.refreshToken));
+
+        const newExpDate = new Date();
+        newExpDate.setMinutes(newExpDate.getMinutes() + 20);
+        dispatch(setExpDate(newExpDate));
+      } catch (error) {
+        console.error("Token refresh failed:", error);
+        return;
+      }
+    }
+
+    let clearImage = null;
+    if (imageBase64 != null) {
+      clearImage = imageBase64.replace("data:", "").replace(/^.+,/, "");
+    }
+
+    const url = "https://localhost:7190/api/CreateBook";
+    const data = {
+      title: title,
+      isbn: isbn,
+      authorId: parseInt(authorId),
+      genreId: parseInt(genreId),
+      description: description,
+      image: clearImage || null,
+    };
+
+    try {
+      await axios.post(url, data, {
+        headers: {
+          Authorization: `Bearer ${store.getState().userToken.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       navigate("/books");
-    } else {
-      const url = "https://localhost:7190/api/CreateBook";
-      const data = {
-        title: title,
-        isbn: isbn,
-        authorId: authorId,
-        genreId: genreId,
-        description: description,
-        image: imageBase64 || null,
-      };
-      axios
-        .post(url, data, {
-          headers: {
-            Authorization: "Bearer " + store.getState().userToken.accessToken,
-          },
-        })
-        .then((result) => {});
-      navigate("/books");
+    } catch (error) {
+      console.error("Book creation failed:", error);
     }
   }
   useEffect(() => {}, []);
@@ -110,7 +114,7 @@ export function BookInfo() {
         }}
       >
         <Search
-          placeholder="input search text"
+          placeholder="Input title of book..."
           style={{
             display: "flex",
             width: 500,
@@ -119,23 +123,13 @@ export function BookInfo() {
             marginTop: 15,
           }}
         />
-        <TableOutlined
-          style={{
-            position: "fixed",
-            top: 0,
-            width: 64,
-            height: 64,
-            padding: 0,
-            marginLeft: 1300,
-          }}
-        ></TableOutlined>
 
         <p
           style={{
             fontSize: "12px",
             position: "fixed",
             top: 0,
-            marginLeft: 1400,
+            marginLeft: 1200,
             marginTop: 0,
           }}
         >
@@ -149,7 +143,10 @@ export function BookInfo() {
             width: 64,
             height: 64,
             padding: 0,
-            marginLeft: 1500,
+            marginLeft: 1350,
+          }}
+          onClick={() => {
+            navigate("/");
           }}
         />
       </Header>
@@ -185,9 +182,12 @@ export function BookInfo() {
                       alignItems: "center",
                     }}
                   >
-                    {selectedImage ? (
+                    {
                       <Image
-                        src={selectedImage}
+                        src={
+                          selectedImage ||
+                          "https://localhost:7190/Images/BookCovers/No_image.png"
+                        }
                         alt="Book Cover"
                         preview={false}
                         style={{
@@ -198,28 +198,13 @@ export function BookInfo() {
                           maxHeight: 221,
                         }}
                       />
-                    ) : (
-                      <div
-                        style={{
-                          width: 150,
-                          height: 170,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          border: "1px dashed #ccc",
-                          color: "#888",
-                          backgroundColor: "#f0f0f0",
-                        }}
-                      >
-                        No Image
-                      </div>
-                    )}
+                    }
                   </div>
                 }
               >
                 <Meta
                   title={title || "Book Title"}
-                  description={authorId || "Author Name"}
+                  description={authorId || "Author Id"}
                 />
               </Card>
 
@@ -303,7 +288,7 @@ export function BookInfo() {
                     overflow: "visible",
                     border: "none",
                   }}
-                  placeholder="Author"
+                  placeholder="AuthorId"
                 ></Input>
               </div>
 
@@ -317,7 +302,7 @@ export function BookInfo() {
                     overflow: "visible",
                     border: "none",
                   }}
-                  placeholder="Genre"
+                  placeholder="GenreId"
                 ></Input>
               </div>
             </div>

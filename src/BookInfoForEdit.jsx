@@ -1,129 +1,441 @@
-import { Button,Layout, Input,Select} from 'antd';
-import { Image, Card, Modal } from 'antd';
-import React, { useState, useEffect,useLayoutEffect} from 'react';
-import axios from 'axios';
+import { Button, Layout, Input } from "antd";
+import { Image, Card, Modal } from "antd";
+import React, { useState, useEffect, useLayoutEffect } from "react";
+import axios from "axios";
+import { store } from "./Store";
+import { useDispatch, useSelector } from "react-redux";
+import { setAccessToken, setRefreshToken } from "./tokenSlice";
+import { TableOutlined, PoweroffOutlined } from "@ant-design/icons";
+import { useNavigate, useParams } from "react-router-dom";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
-import { store } from './Store';
-import { useDispatch,useSelector } from 'react-redux';
-import { setAccessToken, setRefreshToken } from './tokenSlice';
-import ящерка from './ящерка.png'
-import {
-    TableOutlined,
-    PoweroffOutlined,
-  } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
-  const { Header, Sider} = Layout;
-  const { Meta } = Card;
-  const { Search } = Input;
+const { Header } = Layout;
+const { Meta } = Card;
+const { Search } = Input;
+const { TextArea } = Input;
 
-  export function BookInfoForEdit()
-  {
-    const accessToken = useSelector((state)=>state.userToken.accessToken);
-    const refreshToken = useSelector((state)=>state.userToken.refreshToken);
-    const dispatch = useDispatch();
-    const [selectedImage, setSelectedImage] = useState(null);
-    const navigate=useNavigate();
-    const [data,SetData]=useState([]);
-      const {id} = useParams();
-      const url = `https://localhost:7190/api/UpdateBook?id=${id}`;
+export function BookInfoForEdit() {
+  const accessToken = useSelector((state) => state.userToken.accessToken);
+  const refreshToken = useSelector((state) => state.userToken.refreshToken);
+  const dispatch = useDispatch();
+  const [selectedImage, SetSelectedImage] = useState(null);
+  const [imageBase64, SetImageBase64] = useState(null);
+  const navigate = useNavigate();
+  const [data, SetData] = useState([]);
+  const { id } = useParams();
+  const url = `https://localhost:7190/api/UpdateBook?id=${id}`;
 
-      async function getPageOfResults(page, authorId = null, categoryId = null, searchQuery = "") {
-        var c ="";
-        c = await axios.get(`https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`, {
-          params: { authorId, categoryId, searchQuery },
-          headers: {
-            'Authorization': 'Bearer ' + store.getState().userToken.accessToken
-          }
-        });
-        return c.data;
-      }
-
-      async function getAllResults() {
-        let data = [];
-        let lastResultsLength = 10;
-        let page = 1;
-        while (lastResultsLength === 10) {
-          const newResults = await getPageOfResults(page);
-          page++;
-          lastResultsLength = newResults.length;
-          data = Object.values(data.concat(newResults));
-        }
-        await SetData(data);
-        const books = data.find(book=>book.id === parseInt(id));
-        setJanre(books.genreId);
-        setName(books.title);
-        setAuthor(books.authorId);
-        setISBN(books.isbn);
-        setDescription(books.description);
-        return data;
-      }
-      useEffect(()=>
+  async function getPageOfResults(
+    page,
+    authorId = null,
+    genreId = null,
+    searchQuery = ""
+  ) {
+    var c = "";
+    c = await axios.get(
+      `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
       {
-        getAllResults();
-      },[])
-      const handleImageChange = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          const imageUrl = URL.createObjectURL(file); // Create a temporary URL for the selected file
-          setSelectedImage(imageUrl);
-        }
-      };
-
-      const [title,setName] = useState("loading...");
-      const [categoryId,setJanre]=useState("loading...");
-      const [authorId,setAuthor] = useState("loading...");
-      const [isbn,setISBN] = useState("loading...");
-      const [description,setDescription]=useState("loading...");
-
-      const [open, setOpen] = useState(false);
-      const [confirmLoading, setConfirmLoading] = useState(false);
-      const [modalText, setModalText] = useState('Are you sure you want to delete this book?');
-    
-      const handleDelete = () => {
-        setOpen(true);
+        params: { authorId, genreId, searchQuery },
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
       }
-    
-      const handleOk = () => {
+    );
+    return c.data;
+  }
 
-        setModalText('Deleting the book...');
-        setConfirmLoading(true);
-    
-        axios.delete(`https://localhost:7190/api/DeleteBook/?id=${id}`,{headers: {
-          'Authorization': 'Bearer ' + store.getState().userToken.accessToken
-        }})
-          .then(() => {
-            setOpen(false);
-            setConfirmLoading(false);
-            getAllResults();
-          })
-          .catch((error) => {
-            console.error("There was an error deleting the book:", error);
-            setConfirmLoading(false);
-            setModalText('An error occurred. Please try again.');
-          });
-      }
-      const handleCancel = () => {
-        setOpen(false);
-      };
-    
-    const handleSubmit=()=>
-    {
-      const data=
-      {
-        "title": title,
-        "isbn": isbn,
-        "description": description,
-        "image": null,
-        "authorId": authorId,
-        "genreId": categoryId
-      }
-      axios.post(url, data, {headers: {
-        'Authorization': 'Bearer ' + accessToken
-      }});
-      navigate('/books')
+  async function getAllResults() {
+    let data = [];
+    let lastResultsLength = 10;
+    let page = 1;
+
+    while (lastResultsLength === 10) {
+      const newResults = await getPageOfResults(page);
+      page++;
+      lastResultsLength = newResults.length;
+      data = Object.values(data.concat(newResults));
     }
-    return(
-        <Layout>
+
+    await SetData(data);
+    const books = data.find((book) => book.id === parseInt(id));
+    SetTitle(books.title);
+    SetISBN(books.isbn);
+    SetAuthor(books.authorId);
+    SetGenre(books.genreId);
+    SetDescription(books.description);
+    SetSelectedImage(books.image);
+    return data;
+  }
+  useEffect(() => {
+    getAllResults();
+  }, []);
+
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      SetSelectedImage(imageUrl);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        SetImageBase64(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteImage = () => {
+    SetSelectedImage(null);
+    SetImageBase64(null);
+  };
+
+  const [title, SetTitle] = useState("loading...");
+  const [isbn, SetISBN] = useState("loading...");
+  const [genreId, SetGenre] = useState("loading...");
+  const [authorId, SetAuthor] = useState("loading...");
+  const [description, SetDescription] = useState("loading...");
+
+  const [open, setOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [modalText, setModalText] = useState(
+    "Are you sure you want to delete this book?"
+  );
+
+  const handleDelete = () => {
+    setOpen(true);
+  };
+
+  const handleOk = () => {
+    setModalText("Deleting the book...");
+    setConfirmLoading(true);
+
+    axios
+      .delete(`https://localhost:7190/api/DeleteBook/?id=${id}`, {
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
+      })
+      .then(() => {
+        setOpen(false);
+        setConfirmLoading(false);
+        navigate("/books");
+        //getAllResults();
+      })
+      .catch((error) => {
+        console.error("There was an error deleting the book:", error);
+        setConfirmLoading(false);
+        setModalText("An error occurred. Please try again.");
+      });
+  };
+  const handleCancel = () => {
+    setOpen(false);
+  };
+
+  let clearImage = null;
+  if (imageBase64 != null) {
+    clearImage = imageBase64.replace("data:", "").replace(/^.+,/, "");
+  }
+
+  const handleSubmit = () => {
+    const data = {
+      title: title,
+      isbn: isbn,
+      authorId: authorId,
+      genreId: genreId,
+      description: description,
+      image: clearImage || null,
+    };
+    axios.post(url, data, {
+      headers: {
+        Authorization: "Bearer " + accessToken,
+        "Content-Type": "application/json",
+      },
+    });
+    navigate("/books");
+  };
+  return (
+    <Layout>
+      <Header
+        style={{
+          padding: 0,
+          background: "lightskyblue",
+          maxWidth: "100%",
+          width: "100%",
+        }}
+      >
+        <Search
+          placeholder="Input title of book..."
+          style={{
+            display: "flex",
+            width: 500,
+            padding: 0,
+            marginLeft: 450,
+            marginTop: 15,
+          }}
+        />
+        <p
+          style={{
+            fontSize: "12px",
+            position: "fixed",
+            top: 0,
+            marginLeft: 1200,
+            marginTop: 0,
+          }}
+        >
+          USERNAME
+        </p>
+
+        <PoweroffOutlined
+          style={{
+            position: "fixed",
+            top: 0,
+            width: 64,
+            height: 64,
+            padding: 0,
+            marginLeft: 1350,
+          }}
+          onClick={() => {
+            navigate("/");
+          }}
+        />
+      </Header>
+
+      <div class="container h-100">
+        <div class="row">
+          <div class="col-auto justify-content-center layout p-0">
+            <div
+              style={{
+                width: "100%",
+                height: 320,
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <Card
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  marginBottom: 0,
+                  overflow: "visible",
+                  border: "none",
+                }}
+                cover={
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 221,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    {
+                      <Image
+                        src={
+                          selectedImage ||
+                          "https://localhost:7190/Images/BookCovers/No_image.png"
+                        }
+                        alt="Book Cover"
+                        preview={false}
+                        style={{
+                          width: "70%",
+                          height: "70%",
+                          objectFit: "contain",
+                          maxWidth: 216,
+                          maxHeight: 221,
+                        }}
+                      />
+                    }
+                  </div>
+                }
+              >
+                <Meta
+                  title={title || "Book Title"}
+                  description={authorId || "Author Id"}
+                />
+              </Card>
+
+              <EditOutlined
+                onClick={() => {
+                  if (!selectedImage) {
+                    document.getElementById("imageUploader").click();
+                  }
+                }}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  left: 8,
+                  fontSize: 16,
+                  color: selectedImage ? "#ccc" : "#1890ff",
+                  borderRadius: "50%",
+                  padding: 4,
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                  cursor: selectedImage ? "not-allowed" : "pointer",
+                }}
+                disabled={!!selectedImage}
+              />
+
+              <DeleteOutlined
+                onClick={handleDeleteImage}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  fontSize: 16,
+                  color: selectedImage ? "#ff4d4f" : "#ccc",
+                  borderRadius: "50%",
+                  padding: 4,
+                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                  cursor: selectedImage ? "pointer" : "not-allowed",
+                }}
+                disabled={!selectedImage}
+              />
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="row">
+              <div class="col">
+                <Input
+                  value={title}
+                  onChange={(e) => SetTitle(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="Title"
+                ></Input>
+              </div>
+
+              <div class="col">
+                <Input
+                  value={isbn}
+                  onChange={(e) => SetISBN(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="ISBN"
+                ></Input>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col">
+                <Input
+                  value={authorId}
+                  onChange={(e) => SetAuthor(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="AuthorId"
+                ></Input>
+              </div>
+
+              <div class="col">
+                <Input
+                  value={genreId}
+                  onChange={(e) => SetGenre(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="GenreId"
+                ></Input>
+              </div>
+            </div>
+
+            <div
+              class="row"
+              style={{
+                padding: "1%",
+                height: "100%",
+              }}
+            >
+              <TextArea
+                value={description}
+                onChange={(e) => SetDescription(e.target.value)}
+                style={{
+                  marginTop: "2%",
+                  width: "100%",
+                  height: "100px",
+                  border: "none",
+                  borderRadius: "4px",
+                  resize: "vertical",
+                }}
+                placeholder="Description"
+                autoSize={{ minRows: 8, maxRows: 6 }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <Button
+              type="primary"
+              style={{
+                margin: "20px 0px 0px 0px",
+                width: "260px",
+                backgroundColor: "#91caff",
+                borderColor: "#91caff",
+                color: "#fff",
+              }}
+              hover={{
+                backgroundColor: "#40a9ff",
+                borderColor: "#40a9ff",
+              }}
+              variant="solid"
+              onClick={handleSubmit}
+            >
+              Update book
+            </Button>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <Button
+              onClick={() => handleDelete(id)}
+              type="primary"
+              style={{
+                margin: "20px 0px 0px 0px",
+                width: "260px",
+                backgroundColor: "#E32636",
+                borderColor: "#1C1C1C",
+                color: "#fff",
+              }}
+              hover={{
+                backgroundColor: "#40a9ff",
+                borderColor: "#40a9ff",
+              }}
+              variant="solid"
+            >
+              Delete book
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        style={{ display: "none" }}
+        id="imageUploader"
+      />
+
       <Modal
         title="Delete Book"
         open={open}
@@ -133,124 +445,8 @@ import { useNavigate, useParams } from 'react-router-dom';
       >
         <p>{modalText}</p>
       </Modal>
-        <Header
-          style={{
-            padding: 0,
-            background: 'lightskyblue',
-            maxWidth:'100%',
-            width:'100%',
-          }}
-        >
-          <Search
-      placeholder="input search text"
-      style={{
-        display:'flex',
-        width: 500,
-        padding:0,
-        marginLeft:450,
-        marginTop:15
-      }}
-           />
-          <TableOutlined style={{
-              position:'fixed',
-              top:0,
-              width: 64,
-              height: 64,
-              padding:0,
-              marginLeft:1300,
-                    }}></TableOutlined>
-
-            <p style={{
-              fontSize: '12px',
-              position:'fixed',
-              top:0,
-              marginLeft:1400,
-              marginTop:0
-                    }}>USERNAME</p>
-
-
-          <PoweroffOutlined 
-          style={{
-            position:'fixed',
-              top:0,
-              width: 64,
-              height: 64,
-              padding:0,
-            marginLeft:1500
-                  }}
-          />
-    </Header>
-    <div
-    style={{background:'white'}}
-    >
-      <Image
-    src={ящерка}
-    preview={false}
-    style={{
-        width:180,
-        position:'fixed',
-        top:0,
-        height:200,
-        marginLeft:30,
-        marginTop:90
-              }}
-    />
-    <div>
-    <Input value={title} onChange={e=>setName(e.target.value)} style={{marginLeft:340, width:400, marginTop:30}} placeholder='name'></Input>
-    <br></br>
-      <Input value={categoryId} onChange={e=>setJanre(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='janre'></Input>
-      <br></br>
-      <Input value={authorId} onChange={e=>setAuthor(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='author'></Input>
-      <br></br>
-      <Input value={isbn} onChange={e=>setISBN(e.target.value)} style={{marginLeft:340, width:400,marginTop:30}} placeholder='ISBN'></Input>
-    </div>
-
-<Button color="primary" variant="solid"
-        style={{
-          padding: 0,
-          position:'fixed',
-          marginTop:40,
-          marginLeft:50,
-          width:130
-        }}
-        onClick={() => handleDelete(id)}
-        >
-        Удалить
-      </Button>
-
-      <Button color="primary" variant="solid" 
-        style={{
-          padding: 0,
-          position:'fixed',
-          marginTop:80,
-          marginLeft:50,
-          width:200
-        }}
-        onClick={handleSubmit}
-        >
-        Изменить
-      </Button>
-
-      <Input
-      style={{marginLeft:50, position:'fixed',marginTop:150}}
-      placeholder='desc'
-      value={description}
-      onChange={e=>setDescription(e.target.value)}
-      ></Input>
-
-             <Input
-      style={{marginLeft:50, position:'fixed',marginTop:200}}
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          id="imageUploader"
-        ></Input> 
-    </div>
-    
-
     </Layout>
-    )
-    
-  }
+  );
+}
 
 export default BookInfoForEdit;

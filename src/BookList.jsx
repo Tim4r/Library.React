@@ -223,7 +223,7 @@ export function BookList() {
         }}
       >
         <Search
-          placeholder="input search text"
+          placeholder="Input title of book..."
           onSearch={onSearch}
           style={{
             display: "flex",
@@ -233,6 +233,7 @@ export function BookList() {
             marginTop: 15,
           }}
         />
+
         <Button
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -247,26 +248,18 @@ export function BookList() {
             marginLeft: 10,
           }}
         />
-        <TableOutlined
-          style={{
-            position: "fixed",
-            top: 0,
-            width: 64,
-            height: 64,
-            padding: 0,
-            marginLeft: 1300,
-          }}
-        ></TableOutlined>
 
         <p
           style={{
             fontSize: "12px",
             position: "fixed",
             top: 0,
-            marginLeft: 1400,
+            marginLeft: 1200,
             marginTop: 0,
           }}
-        ></p>
+        >
+          USERNAME
+        </p>
 
         <PoweroffOutlined
           style={{
@@ -275,7 +268,7 @@ export function BookList() {
             width: 64,
             height: 64,
             padding: 0,
-            marginLeft: 1500,
+            marginLeft: 1350,
           }}
           onClick={() => {
             navigate("/");
@@ -323,7 +316,7 @@ export function BookList() {
             margin: 0,
             height: 700,
             overflow: "auto",
-            border: 1
+            border: 1,
           }}
         />
       </Sider>

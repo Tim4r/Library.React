@@ -82,9 +82,12 @@ export function BookData({ title, authorName, id, refreshBooks, image }) {
                 backgroundColor: "#fff",
               }}
             >
-              {image ? (
+              {
                 <Image
-                  src={image}
+                  src={
+                    image ||
+                    "https://localhost:7190/Images/BookCovers/No_image.png"
+                  }
                   alt="Book Cover"
                   preview={false}
                   style={{
@@ -95,22 +98,7 @@ export function BookData({ title, authorName, id, refreshBooks, image }) {
                     maxHeight: 221,
                   }}
                 />
-              ) : (
-                <div
-                  style={{
-                    width: 150,
-                    height: 170,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "1px dashed #ccc",
-                    color: "#888",
-                    backgroundColor: "#f0f0f0",
-                  }}
-                >
-                  No Image
-                </div>
-              )}
+              }
             </div>
           }
         >

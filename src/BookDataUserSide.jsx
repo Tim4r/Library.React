@@ -1,132 +1,217 @@
+import { Layout, Card, Modal, Image, Calendar, theme, Tooltip, message } from "antd";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import { store } from "./Store";
+import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
-import { Avatar, Card,Modal, Calendar,Layout,theme} from 'antd';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { store } from './Store';
-import dayjs from 'dayjs';
-import ящерка from './ящерка.png'
-import {
-  PlusOutlined,
-} from '@ant-design/icons';
-import { useEffect,useState } from 'react';
-const { Header, Sider } = Layout;
 const { Meta } = Card;
 
-export function BookDataUserSide(book) {
-var a=true;
-const { token } = theme.useToken();
-const wrapperStyle = {
-  width: 300,
-  border: `1px solid ${token.colorBorderSecondary}`,
-  borderRadius: token.borderRadiusLG,
-};
-const [open, setOpen] = useState(false);
-const [confirmLoading, setConfirmLoading] = useState(false);
-  const [selectedValue, setSelectedValue] = useState(() => dayjs('2017-01-25'));
+export function BookDataUserSide({ book, authorName }) {
+  const { token } = theme.useToken();
+  const wrapperStyle = {
+    width: 300,
+    border: `1px solid ${token.colorBorderSecondary}`,
+    borderRadius: token.borderRadiusLG,
+  };
+  const [open, setOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [selectedValue, setSelectedValue] = useState(() => dayjs());
+  const [isBookTaken, setIsBookTaken] = useState(book?.isTaken || false); // Assuming `isTaken` indicates loan status
+
   const onSelectDate = (newValue) => {
     setSelectedValue(newValue);
   };
-const handleOk = (e) => {
-  const data =
-    {
-      "returnTime": selectedValue,
-      "userId": parseInt(book.userId),
-      "bookId": book.id
+
+  const handleLoan = () => {
+    const currentDate = new Date();
+    const selectedDate = new Date(selectedValue);
+    const diffDays = (selectedDate - currentDate) / (1000 * 60 * 60 * 24);
+
+    if (diffDays < 1 || diffDays > 31) {
+      message.error("Date must be between 1 and 31 days from today.");
+      return;
     }
-  setConfirmLoading(true);
 
-  axios.post(`https://localhost:7190/api/HandOutBook`,data ,{headers: {
-    'Authorization': 'Bearer ' + store.getState().userToken.accessToken
-  }})
-    .then(() => {
-      setOpen(false);
-      setConfirmLoading(false);
-    })
-    .catch((error) => {
-      console.error("There was an error picking the book:", error);
-      setConfirmLoading(false);
-    });
-};
+    const data = {
+      returnTime: selectedValue.format("YYYY-MM-DD"),
+      userId: parseInt(book?.userId || 0),
+      bookId: book?.id,
+      returnDate: selectedValue,
+    };
+    setConfirmLoading(true);
 
-const handleCancel = () => {
-  setOpen(false);
-};
+    axios
+      .post(`https://localhost:7190/api/HandOutBook`, data, {
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
+      })
+      .then(() => {
+        setIsBookTaken(true); // Update the book's status as taken
+        setOpen(false);
+        setConfirmLoading(false);
+      })
+      .catch((error) => {
+        console.error("Failed to create loan.", error);
+        setConfirmLoading(false);
+      });
+      message.success(`Loan created. Return by ${selectedValue}`);
+  };
 
-  async function handleAdd()
-  {
-
-    /* const data =
-    {
-      "returnTime": new Date(Date.now()),
-      "userId": parseInt(book.userId),
-      "bookId": book.id
-    }
-    await axios.post("https://localhost:7190/api/HandOutBook", data,{headers: {
-      'Authorization': 'Bearer ' + store.getState().userToken.accessToken
-    }}).catch((err) => { message.info("book already loan");  a=false;}).then(message.info(`you loan ${book.title}`)); */
+  const openLoanModal = () => {
     setOpen(true);
-  }
-
-  async function FindLoanBooks(params) {
-    
-  }
+  };
 
   return (
-    <Layout
-      style={{
-        width: 300,
-        height: 300,
-        margin: 20,
-        marginBottom: 30,
-        top: 0,
-        display: 'inline-flex',
-        background: 'white'
-      }}
-    >
-      
-      <Card
-        key={book.id}
+    <Layout className="layout">
+      <div
         style={{
-          width: 300,
-          overflow: 'visible',
-          height: 300,
-          margin: 20,
-          marginBottom: 20,
-          top: 0,
-          flexGrow: 1,
+          width: "100%",
+          height: 320,
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          position: "relative",
+          overflow: "hidden",
+          backgroundColor: "#fff",
         }}
-        cover={
-          <img
-            alt="example"
-            src={ящерка}
+      >
+        <Card
+          key={book?.id}
+          style={{
+            width: "100%",
+            height: "100%",
+            marginBottom: 0,
+            overflow: "visible",
+            border: "none",
+          }}
+          cover={
+            <div
+              style={{
+                width: "100%",
+                height: 221,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                alignContent: "center",
+                backgroundColor: "#fff",
+              }}
+            >
+              <Image
+                src={
+                  book?.image ||
+                  "https://localhost:7190/Images/BookCovers/No_image.png"
+                }
+                alt="Book Cover"
+                preview={false}
+                style={{
+                  width: "70%",
+                  height: "70%",
+                  objectFit: "contain",
+                  maxWidth: 216,
+                  maxHeight: 221,
+                }}
+              />
+            </div>
+          }
+        >
+          <Meta
+            title={book?.title || "Unknown Title"}
+            description={authorName || "Unknown Author"}
           />
-        }
-        actions={[
-          a ? <PlusOutlined onClick={handleAdd} key="add" /> : <p>Нет в наличии</p>
+        </Card>
 
-        ]}
-      >
-        <Link to={`/book/${book.id}`}>
-        <Meta
-          title={book.title}
-          description={book.author}
-        />
+        <Link to={`/book/${book?.id}`}>
+          <EyeOutlined
+            style={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              fontSize: 16,
+              color: "#1890ff",
+              backgroundColor: "#fff",
+              borderRadius: "50%",
+              padding: 4,
+              boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+              cursor: "pointer",
+              width: 24,
+              height: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          />
         </Link>
-      </Card>
+
+        {!isBookTaken ? (
+          <Tooltip title="Take this book">
+            <div
+              onClick={openLoanModal}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                fontSize: 16,
+                color: "#52c41a",
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 4,
+                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                cursor: "pointer",
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <PlusOutlined
+                onClick={() => setOpen(true)}
+                style={{
+                  fontSize: 16,
+                  color: book.isReserved ? "#ccc" : "#52c41a",
+                  cursor: book.isReserved ? "not-allowed" : "pointer",
+                }}
+                disabled={book.isReserved}
+              />
+            </div>
+          </Tooltip>
+        ) : (
+          <Tooltip title="This book is already taken">
+            <div
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                fontSize: 16,
+                color: "#d9d9d9",
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 4,
+                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <PlusOutlined />
+            </div>
+          </Tooltip>
+        )}
+      </div>
+
       <Modal
-        title="Loan book"
+        title="Loan Book"
         open={open}
-        onOk={handleOk}
-        confirmLoading={confirmLoading}
-        onCancel={handleCancel}
+        onOk={handleLoan}
+        onCancel={() => setOpen(false)}
       >
-        <p>Укажите дату сдачи книги</p>
-        <div style={wrapperStyle}>
-      <Calendar fullscreen={false} onSelect={onSelectDate} />
-    </div>
-        <p>Книга может быть взята на время от 1 дня до 30 дней. Можете забрать книгу сегодня. Срок возврата: {selectedValue?.format('YYYY-MM-DD')} </p>
+        <p>Select a return date (1-31 days from today)</p>
+        <Calendar fullscreen={false} onSelect={onSelectDate} />
       </Modal>
     </Layout>
-    
-  )
-};
+  );
+}

@@ -15,8 +15,8 @@ const { TextArea } = Input;
 
 export function BookInfo() {
   const navigate = useNavigate();
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imageBase64, setImageBase64] = useState(null);
+  const [selectedImage, SetSelectedImage] = useState(null);
+  const [imageBase64, SetImageBase64] = useState(null);
   const accessToken = useSelector((state) => state.userToken.accessToken);
   const refreshToken = useSelector((state) => state.userToken.refreshToken);
   const expDate = useSelector((state) => state.userToken.expDate);
@@ -34,19 +34,19 @@ export function BookInfo() {
     const file = event.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      setSelectedImage(imageUrl);
+      SetSelectedImage(imageUrl);
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageBase64(reader.result);
+        SetImageBase64(reader.result);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleDeleteImage = () => {
-    setSelectedImage(null);
-    setImageBase64(null);
+    SetSelectedImage(null);
+    SetImageBase64(null);
   };
 
   async function handleSubmit(event) {

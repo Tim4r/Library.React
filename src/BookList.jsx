@@ -309,7 +309,7 @@ export function BookList() {
           onSelect={onClick}
           onDeselect={deselectItem}
           mode="inline"
-          multiple={true}
+          multiple={false}
           items={items}
           style={{
             padding: 0,

@@ -1,203 +1,363 @@
-import { Button, Layout, Input, Select } from "antd";
-import { Image, Card, Modal } from "antd";
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import {
+  Button,
+  Layout,
+  Input,
+  Image,
+  Modal,
+  Card,
+  Tooltip,
+  message,
+  Calendar,
+} from "antd";
 import axios from "axios";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import ящерка from "./ящерка.png";
+import { setAccessToken, setRefreshToken, setExpDate } from "./tokenSlice";
+import { store } from "./Store";
 import { TableOutlined, PoweroffOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
-const { Header, Sider } = Layout;
+import { PlusOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+
+const { Header } = Layout;
 const { Meta } = Card;
-const { Search } = Input;
+const { Search, TextArea } = Input;
 
-export function BookInfoUserSide() {
+export function BookInfoUserSide({ book }) {
   const navigate = useNavigate();
-  const [data, SetData] = useState([]);
   const { id } = useParams();
-  async function getPageOfResults(
-    page,
-    authorId = null,
-    categoryId = null,
-    searchQuery = ""
-  ) {
-    const a = await axios.get(
-      `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
-      {
-        params: { authorId, categoryId, searchQuery },
-      }
-    );
-    return a.data;
-  }
+  const accessToken = useSelector((state) => state.userToken.accessToken);
+  const refreshToken = useSelector((state) => state.userToken.refreshToken);
+  const expDate = useSelector((state) => state.userToken.expDate);
+  const dispatch = useDispatch();
 
-  async function getAllResults() {
-    let data = [];
-    let lastResultsLength = 10;
-    let page = 1;
-    while (lastResultsLength === 10) {
-      const newResults = await getPageOfResults(page);
-      page++;
-      lastResultsLength = newResults.length;
-      data = Object.values(data.concat(newResults));
-    }
-    const books = data.find((book) => book.id === parseInt(id));
-    setJanre(books.categoryId);
-    setName(books.title);
-    setAuthor(books.authorId);
-    setISBN(books.isbn);
-    setDescription(books.description);
-    return data;
-  }
-  useEffect(() => {
-    getAllResults();
-  }, []);
+  const [title, SetTitle] = useState("loading...");
+  const [genreId, SetGenreId] = useState("loading...");
+  const [authorId, SetAuthorId] = useState("loading...");
+  const [isbn, SetIsbn] = useState("loading...");
+  const [description, SetDescription] = useState("loading...");
 
-  const [title, setName] = useState("loading...");
-  const [categoryId, setJanre] = useState("loading...");
-  const [authorId, setAuthor] = useState("loading...");
-  const [isbn, setISBN] = useState("loading...");
-  const [description, setDescription] = useState("loading...");
-
+  const [selectedImage, SetSelectedImage] = useState(null);
+  const [imageBase64, SetImageBase64] = useState(null);
   const [open, setOpen] = useState(false);
+  const [isBookTaken, setIsBookTaken] = useState(book?.isTaken || false);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [modalText, setModalText] = useState(
-    "Are you sure you want to delete this book?"
-  );
+  const [selectedValue, setSelectedValue] = useState(() => dayjs());
 
-  const handleDelete = () => {
-    setOpen(true);
+  const onSelectDate = (newValue) => {
+    setSelectedValue(newValue);
   };
 
-  const handleOk = () => {
-    setModalText("Deleting the book...");
+  const handleLoan = () => {
+    const currentDate = new Date();
+    const selectedDate = new Date(selectedValue);
+    const diffDays = (selectedDate - currentDate) / (1000 * 60 * 60 * 24);
+
+    if (diffDays < 1 || diffDays > 31) {
+      message.error("Date must be between 1 and 31 days from today.");
+      return;
+    }
+
+    const data = {
+      returnTime: selectedValue.format("YYYY-MM-DD"),
+      userId: parseInt(book?.userId || 0),
+      bookId: book?.id,
+      returnDate: selectedValue,
+    };
     setConfirmLoading(true);
 
     axios
-      .delete(`https://localhost:7190/api/DeleteBook/?id=${id}`)
+      .post(`https://localhost:7190/api/HandOutBook`, data, {
+        headers: {
+          Authorization: "Bearer " + store.getState().userToken.accessToken,
+        },
+      })
       .then(() => {
+        setIsBookTaken(true); // Update the book's status as taken
         setOpen(false);
         setConfirmLoading(false);
-        getAllResults();
       })
       .catch((error) => {
-        console.error("There was an error deleting the book:", error);
+        console.error("Failed to create loan.", error);
         setConfirmLoading(false);
-        setModalText("An error occurred. Please try again.");
       });
+      message.success(`Loan created. Return by ${selectedValue}`);
   };
-  const handleCancel = () => {
-    setOpen(false);
-  };
+
+  useEffect(() => {
+    async function validateToken() {
+      if (Date.now() > new Date(expDate).getTime()) {
+        try {
+          const refreshResponse = await axios.post(
+            "https://localhost:7190/api/Account/RefreshToken",
+            { token: refreshToken }
+          );
+          dispatch(setAccessToken(refreshResponse.data.accessToken));
+          dispatch(setRefreshToken(refreshResponse.data.refreshToken));
+          dispatch(setExpDate(new Date().getTime() + 20 * 60 * 1000)); // Extend expiration
+        } catch (error) {
+          console.error("Token refresh failed:", error);
+          navigate("/login"); // Redirect to login if refresh fails
+        }
+      }
+    }
+
+    validateToken();
+  }, [refreshToken, expDate, dispatch, navigate]);
+
+  useEffect(() => {
+    async function fetchBookDetails() {
+      try {
+        const response = await axios.get(
+          `https://localhost:7190/api/GetBookById?id=${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        const book = response.data;
+        if (book) {
+          SetTitle(book.title);
+          SetGenreId(book.genreId);
+          SetAuthorId(book.authorId);
+          SetIsbn(book.isbn);
+          SetDescription(book.description);
+          SetSelectedImage(book.imageUrl || null);
+        }
+      } catch (error) {
+        console.error("Error fetching book details:", error);
+      }
+    }
+
+    fetchBookDetails();
+  }, [id, accessToken]);
 
   return (
     <Layout>
-      <Modal
-        title="Delete Book"
-        open={open}
-        onOk={handleOk}
-        confirmLoading={confirmLoading}
-        onCancel={handleCancel}
-      >
-        <p>{modalText}</p>
-      </Modal>
-
-      <Header
-        style={{
-          padding: 0,
-          background: "lightskyblue",
-          maxWidth: "100%",
-          width: "100%",
-        }}
-      >
+      <Header style={{ background: "lightskyblue", padding: 0 }}>
         <Search
-          placeholder="input search text"
-          style={{
-            display: "flex",
-            width: 500,
-            padding: 0,
-            marginLeft: 450,
-            marginTop: 15,
-          }}
+          placeholder="Search for a book..."
+          style={{ width: 500, margin: "15px auto", display: "block" }}
         />
         <TableOutlined
-          style={{
-            position: "fixed",
-            top: 0,
-            width: 64,
-            height: 64,
-            padding: 0,
-            marginLeft: 1300,
-          }}
-        ></TableOutlined>
-
-        <p
-          style={{
-            fontSize: "12px",
-            position: "fixed",
-            top: 0,
-            marginLeft: 1400,
-            marginTop: 0,
-          }}
-        >
-          USERNAME
-        </p>
-
+          style={{ position: "fixed", top: 10, right: 120, fontSize: 24 }}
+        />
         <PoweroffOutlined
-          style={{
-            position: "fixed",
-            top: 0,
-            width: 64,
-            height: 64,
-            padding: 0,
-            marginLeft: 1500,
-          }}
+          style={{ position: "fixed", top: 10, right: 60, fontSize: 24 }}
+          onClick={() => navigate("/")}
         />
       </Header>
-      <div style={{ background: "white" }}>
-        <Image
-          src={ящерка}
-          preview={false}
-          style={{
-            width: 180,
-            position: "fixed",
-            top: 0,
-            height: 200,
-            marginLeft: 30,
-            marginTop: 90,
-          }}
-        />
-        <div>
-          <p style={{ marginLeft: 340, width: 400, marginTop: 30 }}> {title}</p>
-          <br></br>
-          <p style={{ marginLeft: 340, width: 400, marginTop: 30 }}>
-            {categoryId}
-          </p>
-          <br></br>
-          <p style={{ marginLeft: 340, width: 400, marginTop: 30 }}>
-            {authorId}
-          </p>
-          <br></br>
-          <p style={{ marginLeft: 340, width: 400, marginTop: 30 }}>{isbn}</p>
+
+      <div class="container h-100">
+        <div class="row">
+          <div class="col-auto justify-content-center layout p-0">
+            <div
+              style={{
+                width: "100%",
+                height: 320,
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <Card
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  marginBottom: 0,
+                  overflow: "visible",
+                  border: "none",
+                }}
+                cover={
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 221,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Image
+                      src={
+                        selectedImage ||
+                        "https://localhost:7190/Images/BookCovers/No_image.png"
+                      }
+                      alt="Book Cover"
+                      preview={false}
+                      style={{
+                        width: "70%",
+                        height: "70%",
+                        objectFit: "contain",
+                        maxWidth: 216,
+                        maxHeight: 221,
+                      }}
+                    />
+                  </div>
+                }
+              >
+                <Meta
+                  title={title || "Book Title"}
+                  description={authorId || "Author Id"}
+                />
+              </Card>
+
+              {!isBookTaken ? (
+                <Tooltip title="Take this book">
+                  <div
+                    onClick={() => setOpen(true)}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: 16,
+                      color: "#52c41a",
+                      backgroundColor: "#fff",
+                      borderRadius: "50%",
+                      padding: 4,
+                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                      cursor: "pointer",
+                      width: 24,
+                      height: 24,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <PlusOutlined />
+                  </div>
+                </Tooltip>
+              ) : (
+                <Tooltip title="This book is already taken">
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: 16,
+                      color: "#d9d9d9",
+                      backgroundColor: "#fff",
+                      borderRadius: "50%",
+                      padding: 4,
+                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                      width: 24,
+                      height: 24,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <PlusOutlined />
+                  </div>
+                </Tooltip>
+              )}
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="row">
+              <div class="col">
+                <Input
+                  value={title}
+                  disabled={true}
+                  onChange={(e) => SetTitle(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="Title"
+                ></Input>
+              </div>
+
+              <div class="col">
+                <Input
+                  value={isbn}
+                  disabled={true}
+                  onChange={(e) => SetIsbn(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="ISBN"
+                ></Input>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col">
+                <Input
+                  value={authorId}
+                  disabled={true}
+                  onChange={(e) => SetAuthorId(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="AuthorId"
+                ></Input>
+              </div>
+
+              <div class="col">
+                <Input
+                  value={genreId}
+                  disabled={true}
+                  onChange={(e) => SetGenreId(e.target.value)}
+                  style={{
+                    marginTop: "5%",
+                    width: "100%",
+                    overflow: "visible",
+                    border: "none",
+                  }}
+                  placeholder="GenreId"
+                ></Input>
+              </div>
+            </div>
+
+            <div
+              class="row"
+              style={{
+                padding: "1%",
+                height: "100%",
+              }}
+            >
+              <TextArea
+                value={description}
+                disabled={true}
+                onChange={(e) => SetDescription(e.target.value)}
+                style={{
+                  marginTop: "2%",
+                  width: "100%",
+                  height: "100px",
+                  border: "none",
+                  borderRadius: "4px",
+                  resize: "vertical",
+                }}
+                placeholder="Description"
+                autoSize={{ minRows: 8, maxRows: 6 }}
+              />
+            </div>
+          </div>
         </div>
-
-        <Button
-          color="primary"
-          variant="solid"
-          style={{
-            padding: 0,
-            position: "fixed",
-            marginTop: 40,
-            marginLeft: 50,
-            width: 130,
-          }}
-          onClick={() => handleDelete(id)}
-        >
-          Добавить книгу
-        </Button>
-
-        <p style={{ marginLeft: 50, position: "fixed", marginTop: 150 }}>
-          {description}
-        </p>
       </div>
+
+      <Modal
+        title="Loan Book"
+        open={open}
+        onOk={handleLoan}
+        confirmLoading={confirmLoading}
+        onCancel={() => setOpen(false)}
+      >
+        <p>Select a return date (1-31 days from today)</p>
+        <Calendar fullscreen={false} onSelect={onSelectDate} />
+      </Modal>
     </Layout>
   );
 }

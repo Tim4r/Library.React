@@ -6,6 +6,8 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { BookDataUserSide } from "./BookDataUserSide";
 import { setAccessToken, setExpDate, setRefreshToken } from "./tokenSlice";
+import moment from "moment";
+import { addFilteredData,removeFilteredData } from "./dataSlice";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -14,6 +16,7 @@ import {
   ContactsOutlined,
   PoweroffOutlined,
 } from "@ant-design/icons";
+
 import { useNavigate } from "react-router-dom";
 const { Header, Sider } = Layout;
 const { Search } = Input;
@@ -41,22 +44,24 @@ export function BookListUserSide() {
   var menuJanres = [];
   var menuAuthors = [];
 
-  const date = new Date(store.getState().userToken.expDate);
-  date.setMinutes(date.getMinutes() + 1);
+   const Expdate = new Date(store.getState().userToken.expDate);
 
   async function getPageOfResults(page, authorId, categoryId, searchQuery) {
     var c = "";
-    if (Date.now() >= date) {
+    if (moment(Expdate).isBefore(Date.now())) {
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
-          token: `${refreshToken}`,
+          token: `${store.getState().userToken.refreshToken}`,
         })
         .then((result) => {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
-          date.setMinutes(date.getMinutes() + 1);
-          dispatch(setExpDate(date));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
         });
+
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
@@ -135,25 +140,63 @@ export function BookListUserSide() {
   }
 
   useEffect(() => {
-    getAllResults(authorId, categoryId, searchQuery);
-  }, [refreshToken, accessToken]);
-
-  async function onClick(e) {
-    if (e.keyPath[1] === "sub2") {
-      getAllResults("", parseInt(e.key) + 1, "");
+    if (moment(Expdate).isBefore(Date.now())) {
+      axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${store.getState().userToken.refreshToken}`,
+        })
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+        });
+      getAllResults("", "", "");
     } else {
-      getAllResults(parseInt(e.key) + 1, "", "");
+      getAllResults("", "", "");
     }
-    await setCategoryId(parseInt(e.key) + 1);
-    await setAuthorId(parseInt(e.key) + 1);
+  }, []);
+
+
+   async function onClick(e) {
+    SetCurrentPage(1);
+    let newResults;
+    if(e.keyPath[1] == "sub2")
+    {
+      newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
+    }
+    else{
+      newResults = await getAllResults(parseInt(e.key) + 1, "","");
+    }
+      await dispatch(addFilteredData(newResults));
+    await SetData(store.getState().filteredData.filteredData);
   }
-  async function deselectItem() {
-    await setCategoryId("");
-    await setAuthorId("");
-    getAllResults("", "", "");
-  }
-  for (let i = 0; i < janres.length; i++) {
-    let children = [{ key: `${i}`, label: `${janres[i].name}` }];
+
+    async function deselectItem(e) {
+      SetCurrentPage(1);
+      let newResults;
+      if(e.keyPath[1] == "sub2")
+        {
+          newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
+          
+        }
+        else{
+          newResults = await getAllResults(parseInt(e.key) + 1, "","");
+          
+        }
+      await dispatch(removeFilteredData(newResults));
+      SetData(store.getState().filteredData.filteredData);
+      if(store.getState().filteredData.filteredData.length == 0)
+      {
+        getAllResults("", "", "");
+      }
+  
+    }
+ 
+  for (let i = authors.length; i < janres.length + authors.length; i++) {
+    let children = [{ key: `${i}`, label: `${janres[i-authors.length].name}` }];
     menuJanres = [...menuJanres, ...children];
   }
 
@@ -285,8 +328,9 @@ export function BookListUserSide() {
           id="Menu"
           onSelect={onClick}
           onDeselect={deselectItem}
+          defaultSelectedKeys={1}
           mode="inline"
-          multiple={false}
+          multiple={true}
           items={items}
           style={{
             padding: 0,

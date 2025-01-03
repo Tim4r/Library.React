@@ -24,7 +24,7 @@ const { Header } = Layout;
 const { Meta } = Card;
 const { Search, TextArea } = Input;
 
-export function BookInfoUserSide({ book }) {
+export function BookInfoUserSideWithoutPlusBtn({ book }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const accessToken = useSelector((state) => state.userToken.accessToken);
@@ -47,7 +47,6 @@ export function BookInfoUserSide({ book }) {
   const [collapsed, setCollapsed] = useState(false);
   const [bookLibraryOpen, setBookLibraryOpen] = useState(false);
 
-
   const onSelectDate = (newValue) => {
     setSelectedValue(newValue);
   };
@@ -65,7 +64,7 @@ export function BookInfoUserSide({ book }) {
     const data = {
       returnTime: selectedValue.format("YYYY-MM-DD"),
       userId: parseInt(book?.userId || 0),
-      bookId: book?.id,
+      bookId: id,
       returnDate: selectedValue,
     };
     setConfirmLoading(true);
@@ -157,7 +156,7 @@ export function BookInfoUserSide({ book }) {
             marginLeft: 450,
             marginTop: 15,
           }}
-        />    
+        />
         <p
           style={{
             fontSize: "12px",
@@ -237,56 +236,6 @@ export function BookInfoUserSide({ book }) {
                   description={authorId || "Author Id"}
                 />
               </Card>
-
-              {!isBookTaken ? (
-                <Tooltip title="Take this book">
-                  <div
-                    onClick={() => setOpen(true)}
-                    style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      fontSize: 16,
-                      color: "#52c41a",
-                      backgroundColor: "#fff",
-                      borderRadius: "50%",
-                      padding: 4,
-                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                      cursor: "pointer",
-                      width: 24,
-                      height: 24,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <PlusOutlined />
-                  </div>
-                </Tooltip>
-              ) : (
-                <Tooltip title="This book is already taken">
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      fontSize: 16,
-                      color: "#d9d9d9",
-                      backgroundColor: "#fff",
-                      borderRadius: "50%",
-                      padding: 4,
-                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                      width: 24,
-                      height: 24,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <PlusOutlined />
-                  </div>
-                </Tooltip>
-              )}
             </div>
           </div>
 
@@ -396,4 +345,4 @@ export function BookInfoUserSide({ book }) {
   );
 }
 
-export default BookInfoUserSide;
+export default BookInfoUserSideWithoutPlusBtn;

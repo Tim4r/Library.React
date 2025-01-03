@@ -23,7 +23,7 @@ export function BookData({ title, authorName, id, refreshBooks, image }) {
   };
 
   const handleOk = () => {
-    setModalText("Deleting the book...");
+    setModalText("Введите название книги");
     setConfirmLoading(true);
 
     axios

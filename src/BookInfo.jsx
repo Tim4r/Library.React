@@ -1,5 +1,6 @@
 import { Button, Layout, Input, Image, Card } from "antd";
 import axios from "axios";
+import moment from "moment";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setAccessToken, setRefreshToken, setExpDate } from "./tokenSlice";
@@ -28,7 +29,7 @@ export function BookInfo() {
   const [genreId, SetGenreId] = useState("");
   const [description, SetDescription] = useState("");
 
-  const date = new Date(expDate);
+  const Expdate = new Date(store.getState().userToken.expDate);
 
   const handleImageChange = (event) => {
     const file = event.target.files[0];
@@ -50,23 +51,23 @@ export function BookInfo() {
   };
 
   async function handleSubmit(event) {
+    
     event.preventDefault();
 
-    if (Date.now() > date.getTime()) {
+    if (moment(Expdate).isBefore(Date.now())) {
       try {
-        const refreshResponse = await axios.post(
-          "https://localhost:7190/api/Account/RefreshToken",
-          {
-            token: refreshToken,
-          }
-        );
-
-        dispatch(setAccessToken(refreshResponse.data.accessToken));
-        dispatch(setRefreshToken(refreshResponse.data.refreshToken));
-
-        const newExpDate = new Date();
-        newExpDate.setMinutes(newExpDate.getMinutes() + 20);
-        dispatch(setExpDate(newExpDate));
+        await axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${store.getState().userToken.refreshToken}`,
+        })
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+        });
       } catch (error) {
         console.error("Token refresh failed:", error);
         return;
@@ -114,7 +115,7 @@ export function BookInfo() {
         }}
       >
         <Search
-          placeholder="Input title of book..."
+          placeholder="Введите название книги"
           style={{
             display: "flex",
             width: 500,
@@ -133,7 +134,7 @@ export function BookInfo() {
             marginTop: 0,
           }}
         >
-          USERNAME
+          Anton
         </p>
 
         <PoweroffOutlined
@@ -203,8 +204,8 @@ export function BookInfo() {
                 }
               >
                 <Meta
-                  title={title || "Book Title"}
-                  description={authorId || "Author Id"}
+                  title={title || "Название книги"}
+                  description={authorId || "ID автора"}
                 />
               </Card>
 
@@ -258,7 +259,7 @@ export function BookInfo() {
                     overflow: "visible",
                     border: "none",
                   }}
-                  placeholder="Title"
+                  placeholder="Название книги"
                 ></Input>
               </div>
 
@@ -288,7 +289,7 @@ export function BookInfo() {
                     overflow: "visible",
                     border: "none",
                   }}
-                  placeholder="AuthorId"
+                  placeholder="ID автора"
                 ></Input>
               </div>
 
@@ -302,7 +303,7 @@ export function BookInfo() {
                     overflow: "visible",
                     border: "none",
                   }}
-                  placeholder="GenreId"
+                  placeholder="ID жанра"
                 ></Input>
               </div>
             </div>
@@ -325,7 +326,7 @@ export function BookInfo() {
                   borderRadius: "4px",
                   resize: "vertical",
                 }}
-                placeholder="Description"
+                placeholder="Описание"
                 autoSize={{ minRows: 8, maxRows: 6 }}
               />
             </div>
@@ -350,7 +351,7 @@ export function BookInfo() {
               variant="solid"
               onClick={handleSubmit}
             >
-              Create book
+              Добавить новую книгу
             </Button>
 
             <input

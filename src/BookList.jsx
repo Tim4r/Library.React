@@ -1,7 +1,8 @@
-import { Button, Layout, Menu, Table, Col, Input, Row, Pagination } from "antd";
+import { Button, Layout, Menu, Table, Col, Input, Row, Pagination, message } from "antd";
 import React, { useState, useEffect } from "react";
 import { BookData } from "./BookData";
 import axios from "axios";
+import moment from "moment";
 import { store } from "./Store";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -12,15 +13,16 @@ import {
   ContactsOutlined,
   PoweroffOutlined,
   PlusOutlined,
+  BookOutlined
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import { setAccessToken, setExpDate, setRefreshToken } from "./tokenSlice";
+import { addFilteredData,removeFilteredData } from "./dataSlice";
 const { Header, Sider } = Layout;
 const { Search } = Input;
 export function BookList() {
   const accessToken = useSelector((state) => state.userToken.accessToken);
   const refreshToken = useSelector((state) => state.userToken.refreshToken);
-  // const expDate = useSelector((state) => state.userToken.expDate);
   const dispatch = useDispatch();
   const [collapsed, setCollapsed] = useState(false);
   const [data, SetData] = useState([]);
@@ -30,36 +32,38 @@ export function BookList() {
   const firstPostIndex = lastPostIndex - postPerPage;
   const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);
   const [janres, SetJanres] = useState([]);
+  var filteredData =[];
   const [authors, SetAuthors] = useState([]);
-
-  const [authorId, setAuthorId] = useState(null);
-  const [categoryId, setCategoryId] = useState(null);
+  const navigate = useNavigate();
+  const [authorId, setAuthorId] = useState([]);
+  const [categoryId, setCategoryId] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   var menuJanres = [];
   var menuAuthors = [];
 
   const date = new Date(Date.now());
-  date.setMinutes(date.getMinutes() + 1);
-  dispatch(setExpDate(date.toString()));
-  const navigate = useNavigate();
+  const Expdate = new Date(store.getState().userToken.expDate);
 
-  async function getPageOfResults(page, authorId, categoryId, searchQuery) {
+  async function getPageOfResults(page, authorId, genreId, searchQuery) {
     var c = "";
-    if (Date.now() >= date) {
+    if (moment(Expdate).isBefore(Date.now())) {
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
-          token: `${refreshToken}`,
+          token: `${store.getState().userToken.refreshToken}`,
         })
         .then((result) => {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
-          date.setMinutes(date.getMinutes() + 1);
-          dispatch(setExpDate(date));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
         });
+
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, categoryId, searchQuery },
+          params: { authorId, genreId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
@@ -69,12 +73,13 @@ export function BookList() {
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, categoryId, searchQuery },
+          params: { authorId, genreId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
         }
       );
+
     }
     return c.data;
   }
@@ -138,41 +143,64 @@ export function BookList() {
     setSearchQuery(value);
     getAllResults(authorId, categoryId, value);
   };
+
   async function onClick(e) {
-    if (e.keyPath[1] === "sub2") {
-      getAllResults("", parseInt(e.key) + 1, "");
-    } else {
-      getAllResults(parseInt(e.key) + 1, "", "");
+    SetCurrentPage(1);
+    let newResults;
+    if(e.keyPath[1] == "sub2")
+    {
+      newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
     }
-    await setCategoryId(parseInt(e.key) + 1);
-    await setAuthorId(parseInt(e.key) + 1);
+    else{
+      newResults = await getAllResults(parseInt(e.key) + 1, "","");
+    }
+      await dispatch(addFilteredData(newResults));
+    await SetData(store.getState().filteredData.filteredData);
   }
-  async function deselectItem() {
-    await setCategoryId("");
-    await setAuthorId("");
-    getAllResults("", "", "");
+
+  async function deselectItem(e) {
+    SetCurrentPage(1);
+    let newResults;
+    if(e.keyPath[1] == "sub2")
+      {
+        newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
+        
+      }
+      else{
+        newResults = await getAllResults(parseInt(e.key) + 1, "","");
+        
+      }
+    await dispatch(removeFilteredData(newResults));
+    SetData(store.getState().filteredData.filteredData);
+    if(store.getState().filteredData.filteredData.length == 0)
+    {
+      getAllResults("", "", "");
+    }
+
   }
 
   useEffect(() => {
-    if (Date.now() > date) {
+    if (moment(Expdate).isBefore(Date.now())) {
       axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
-          token: `${refreshToken}`,
+          token: `${store.getState().userToken.refreshToken}`,
         })
         .then((result) => {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
-          date.setMinutes(date.getMinutes() + 1);
-          dispatch(setExpDate(date));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
         });
-      getAllResults(authorId, categoryId, searchQuery);
+      getAllResults("", "", "");
     } else {
-      getAllResults(authorId, categoryId, searchQuery);
+      getAllResults("", "", "");
     }
-  }, [refreshToken, accessToken, dispatch]);
+  }, []);
 
-  for (let i = 0; i < janres.length; i++) {
-    let children = [{ key: `${i}`, label: `${janres[i].name}` }];
+  for (let i = authors.length; i < janres.length + authors.length; i++) {
+    let children = [{ key: `${i}`, label: `${janres[i-authors.length].name}` }];
     menuJanres = [...menuJanres, ...children];
   }
 
@@ -274,6 +302,19 @@ export function BookList() {
             navigate("/");
           }}
         />
+        <BookOutlined 
+        style={{
+          position: "fixed",
+          top: 0,
+          width: 64,
+          height: 64,
+          padding: 0,
+          marginLeft: 1300,
+        }}
+        onClick={() => {
+          message.info("Отчёт успешно создан за текущий месяц!");
+        }}
+        />
       </Header>
 
       <Sider
@@ -309,7 +350,8 @@ export function BookList() {
           onSelect={onClick}
           onDeselect={deselectItem}
           mode="inline"
-          multiple={false}
+          multiple={true}
+          defaultSelectedKeys={1}
           items={items}
           style={{
             padding: 0,
@@ -415,6 +457,7 @@ export function BookList() {
           />
         </div>
       </div>
+      
     </Layout>
   );
 }

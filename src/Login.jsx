@@ -15,9 +15,14 @@ export function Login (){
     const token = useSelector((state)=>state.userToken.token);
     console.log(token)
     const dispatch = useDispatch();
+    
+    const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+
     const LoginCheck=()=>
         {
-
             const data=
             {
                   "username": login,
@@ -63,9 +68,9 @@ export function Login (){
 
             }
         }
-        >Book Shelf</p>
+        >Электронная библиотека</p>
 
-        <Input placeholder='введите логин'
+        <Input placeholder='Введите логин'
         onChange={e=>setLogin(e.target.value)}
         style={
             {
@@ -77,7 +82,7 @@ export function Login (){
         
         </Input>
 
-        <Input placeholder='введите пароль'
+        <Input placeholder='Введите пароль'
         onChange={e=>setPassword(e.target.value)}
          style={
             {
@@ -91,7 +96,7 @@ export function Login (){
 <p
 style={{textDecoration:'underline', color:'blue'}}
 onClick={Registration}
->создать аккаунт</p>
+>Создать аккаунт</p>
 
         <Button
         onClick={LoginCheck}

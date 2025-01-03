@@ -11,11 +11,16 @@ import { BookListUser } from "./BookListUser";
 import { Login } from "./Login";
 import { Registration } from "./Registration";
 import { BookInfoUserSide } from "./BookInfoUserSide";
+import { BookInfoUserSideWithoutPlusBtn } from "./BookInfoUserSideWithoutPlusBtn";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path="/currentbookuser/:id"
+          element={<BookInfoUserSideWithoutPlusBtn></BookInfoUserSideWithoutPlusBtn>}
+        ></Route>
         <Route
           path="/books/:id"
           element={<BookListUserSide></BookListUserSide>}

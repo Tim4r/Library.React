@@ -2,9 +2,10 @@ import { Button, Layout, Input } from "antd";
 import { Image, Card, Modal } from "antd";
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import axios from "axios";
+import moment from "moment";
 import { store } from "./Store";
 import { useDispatch, useSelector } from "react-redux";
-import { setAccessToken, setRefreshToken } from "./tokenSlice";
+import { setAccessToken, setRefreshToken, setExpDate } from "./tokenSlice";
 import { TableOutlined, PoweroffOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
@@ -24,14 +25,29 @@ export function BookInfoForEdit() {
   const [data, SetData] = useState([]);
   const { id } = useParams();
   const url = `https://localhost:7190/api/UpdateBook?id=${id}`;
-
+  const Expdate = new Date(store.getState().userToken.expDate);
   async function getPageOfResults(
     page,
     authorId = null,
     genreId = null,
-    searchQuery = ""
-  ) {
+    searchQuery = "") 
+  {
     var c = "";
+if(moment(Expdate).isBefore(Date.now()))
+{
+  await axios
+  .post("https://localhost:7190/api/Account/RefreshToken", {
+    token: `${store.getState().userToken.refreshToken}`,
+  })
+  .then((result) => {
+    dispatch(setAccessToken(result.data.accessToken));
+    dispatch(setRefreshToken(result.data.refreshToken));
+    const d = new Date();
+d.setMinutes(d.getMinutes() +1);
+const dd = d.toString();
+dispatch(setExpDate(dd));
+  });
+
     c = await axios.get(
       `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
       {
@@ -41,6 +57,20 @@ export function BookInfoForEdit() {
         },
       }
     );
+}
+else
+{
+  c = await axios.get(
+    `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
+    {
+      params: { authorId, genreId, searchQuery },
+      headers: {
+        Authorization: "Bearer " + store.getState().userToken.accessToken,
+      },
+    }
+  );
+}
+    
     return c.data;
   }
 
@@ -67,7 +97,26 @@ export function BookInfoForEdit() {
     return data;
   }
   useEffect(() => {
-    getAllResults();
+    if(moment(Expdate).isBefore(Date.now()))
+      {
+       axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${refreshToken}`,
+        })
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          const d = new Date();
+      d.setMinutes(d.getMinutes() +1);
+      const dd = d.toString();
+      dispatch(setExpDate(dd));
+        });
+        getAllResults();
+      }
+      else{
+        getAllResults();
+      }
+
   }, []);
 
   const handleImageChange = (event) => {
@@ -98,7 +147,7 @@ export function BookInfoForEdit() {
   const [open, setOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [modalText, setModalText] = useState(
-    "Are you sure you want to delete this book?"
+    "Вы действительно хотите удалить книгу?"
   );
 
   const handleDelete = () => {
@@ -106,7 +155,7 @@ export function BookInfoForEdit() {
   };
 
   const handleOk = () => {
-    setModalText("Deleting the book...");
+    setModalText("Удаление книги...");
     setConfirmLoading(true);
 
     axios
@@ -164,7 +213,7 @@ export function BookInfoForEdit() {
         }}
       >
         <Search
-          placeholder="Input title of book..."
+          placeholder="Введите название книги"
           style={{
             display: "flex",
             width: 500,
@@ -182,7 +231,7 @@ export function BookInfoForEdit() {
             marginTop: 0,
           }}
         >
-          USERNAME
+          Антон
         </p>
 
         <PoweroffOutlined
@@ -399,7 +448,7 @@ export function BookInfoForEdit() {
               variant="solid"
               onClick={handleSubmit}
             >
-              Update book
+              Обновить книгу
             </Button>
           </div>
         </div>
@@ -422,7 +471,7 @@ export function BookInfoForEdit() {
               }}
               variant="solid"
             >
-              Delete book
+              Удалить книгу
             </Button>
           </div>
         </div>
@@ -437,7 +486,7 @@ export function BookInfoForEdit() {
       />
 
       <Modal
-        title="Delete Book"
+        title="Удаление книги"
         open={open}
         onOk={handleOk}
         confirmLoading={confirmLoading}

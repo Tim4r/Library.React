@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 
 const { Meta } = Card;
 
-export function BookDataUserSide({ book, authorName }) {
+export function BookDataUserSideWithoutPlusBtn({ book, authorName }) {
   const { token } = theme.useToken();
   const wrapperStyle = {
     width: 300,
@@ -18,26 +18,28 @@ export function BookDataUserSide({ book, authorName }) {
   const [open, setOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [selectedValue, setSelectedValue] = useState(() => dayjs());
-  const [isBookTaken, setIsBookTaken] = useState(book?.isTaken || false); // Assuming `isTaken` indicates loan status
 
   const onSelectDate = (newValue) => {
     setSelectedValue(newValue);
   };
-async function handleLoan() {
-  const currentDate = new Date();
+
+  const handleLoan = () => {
+    const currentDate = new Date();
     const selectedDate = new Date(selectedValue);
     const diffDays = (selectedDate - currentDate) / (1000 * 60 * 60 * 24);
 
     if (diffDays < 1 || diffDays > 31) {
       message.error("Date must be between 1 and 31 days from today.");
+      return;
     }
 
     const data = {
       returnTime: selectedValue.format("YYYY-MM-DD"),
-      userId: parseInt(book?.userId || 0),
-      bookId: book?.id,
+      userId: parseInt(book.userId || 0),
+      bookId: book.id,
       returnDate: selectedValue,
     };
+    setConfirmLoading(true);
 
     axios
       .post(`https://localhost:7190/api/HandOutBook`, data, {
@@ -46,22 +48,20 @@ async function handleLoan() {
         },
       })
       .then(() => {
-        setIsBookTaken(true); // Update the book's status as taken
+        //setIsBookTaken(true); // Update the book's status as taken
         setOpen(false);
+        setConfirmLoading(false);
       })
       .catch((error) => {
         console.error("Failed to create loan.", error);
-        message.error("Book is already loan, please, choose another");
+        setConfirmLoading(false);
       });
-      if(isBookTaken)
-      {
-        message.success(`Loan created. Return by ${selectedValue}`);
-      }
+      message.success(`Loan created. Return by ${selectedValue}`);
   };
 
   const openLoanModal = () => {
     setOpen(true);
-}
+  };
 
   return (
     <Layout className="layout">
@@ -121,7 +121,7 @@ async function handleLoan() {
           />
         </Card>
 
-        <Link to={`/book/${book?.id}`}>
+        <Link to={`/currentbookuser/${book.bookId}`}>
           <EyeOutlined
             style={{
               position: "absolute",
@@ -142,75 +142,7 @@ async function handleLoan() {
             }}
           />
         </Link>
-
-        {!isBookTaken ? (
-          <Tooltip title="Take this book">
-            <div
-              onClick={openLoanModal}
-              style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                fontSize: 16,
-                color: "#52c41a",
-                backgroundColor: "#fff",
-                borderRadius: "50%",
-                padding: 4,
-                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                cursor: "pointer",
-                width: 24,
-                height: 24,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <PlusOutlined
-                onClick={() => setOpen(true)}
-                style={{
-                  fontSize: 16,
-                  color: book.isReserved ? "#ccc" : "#52c41a",
-                  cursor: book.isReserved ? "not-allowed" : "pointer",
-                }}
-                disabled={book.isReserved}
-              />
-            </div>
-          </Tooltip>
-        ) : (
-          <Tooltip title="This book is already taken">
-            <div
-              style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                fontSize: 16,
-                color: "#d9d9d9",
-                backgroundColor: "#fff",
-                borderRadius: "50%",
-                padding: 4,
-                boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                width: 24,
-                height: 24,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <PlusOutlined />
-            </div>
-          </Tooltip>
-        )}
       </div>
-
-      <Modal
-        title="Loan Book"
-        open={open}
-        onOk={handleLoan}
-        onCancel={() => setOpen(false)}
-      >
-        <p>Select a return date (1-31 days from today)</p>
-        <Calendar fullscreen={false} onSelect={onSelectDate} />
-      </Modal>
     </Layout>
   );
 }

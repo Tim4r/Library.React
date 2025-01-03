@@ -45,9 +45,9 @@ export function Registration (){
 
             }
         }
-        >Book Shelf</p>
+        >Электронная библиотека</p>
 
-        <Input placeholder='введите логин'
+        <Input placeholder='Введите логин'
         onChange={e=>setLogin(e.target.value)}
         style={
             {
@@ -58,7 +58,7 @@ export function Registration (){
         >
         </Input>
 
-        <Input placeholder='введите почту'
+        <Input placeholder='Введите почту'
         onChange={e=>SetEmail(e.target.value)}
         style={
             {
@@ -70,7 +70,7 @@ export function Registration (){
         
         </Input>
 
-        <Input placeholder='введите пароль'
+        <Input placeholder='Введите пароль'
         onChange={e=>setPassword(e.target.value)}
          style={
             {

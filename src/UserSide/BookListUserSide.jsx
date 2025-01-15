@@ -1,13 +1,17 @@
 import { Button, Layout, Menu, Input, Row, Pagination } from "antd";
 import React, { useState, useEffect } from "react";
-import { store } from "./Store";
+import { store } from "../ReduxStore/Store";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { BookDataUserSide } from "./BookDataUserSide";
-import { setAccessToken, setExpDate, setRefreshToken } from "./tokenSlice";
+import { addFilteredData, removeFilteredData } from "../ReduxStore/dataSlice";
 import moment from "moment";
-import { addFilteredData,removeFilteredData } from "./dataSlice";
+import {
+  setAccessToken,
+  setExpDate,
+  setRefreshToken,
+} from "../ReduxStore/tokenSlice";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -16,7 +20,6 @@ import {
   ContactsOutlined,
   PoweroffOutlined,
 } from "@ant-design/icons";
-
 import { useNavigate } from "react-router-dom";
 const { Header, Sider } = Layout;
 const { Search } = Input;
@@ -44,11 +47,22 @@ export function BookListUserSide() {
   var menuJanres = [];
   var menuAuthors = [];
 
-   const Expdate = new Date(store.getState().userToken.expDate);
+  const date = new Date(store.getState().userToken.expDate);
+  var Expdate;
 
-  async function getPageOfResults(page, authorId, categoryId, searchQuery) {
+  async function getPageOfResults(page, authorId, genreId, searchQuery) {
     var c = "";
+    if (store.getState().userToken.expDate.length < 1) {
+      Expdate = new Date(window.localStorage.getItem("date"));
+      dispatch(setRefreshToken(window.localStorage.getItem("ref")));
+      dispatch(setAccessToken(window.localStorage.getItem("acc")));
+    } else {
+      Expdate = new Date(store.getState().userToken.expDate);
+    }
+
     if (moment(Expdate).isBefore(Date.now())) {
+      console.log("if expdate is before");
+      console.log(store.getState().userToken.refreshToken);
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
           token: `${store.getState().userToken.refreshToken}`,
@@ -57,15 +71,27 @@ export function BookListUserSide() {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
           const d = new Date();
-    d.setMinutes(d.getMinutes() +1);
-    const dd = d.toString();
-    dispatch(setExpDate(dd));
+          d.setMinutes(d.getMinutes() + 1);
+          const dd = d.toString();
+          dispatch(setExpDate(dd));
+          window.localStorage.setItem(
+            "date",
+            store.getState().userToken.expDate
+          );
+          window.localStorage.setItem(
+            "ref",
+            store.getState().userToken.refreshToken
+          );
+          window.localStorage.setItem(
+            "acc",
+            store.getState().userToken.accessToken
+          );
         });
 
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, categoryId, searchQuery },
+          params: { authorId, genreId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
@@ -75,13 +101,16 @@ export function BookListUserSide() {
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, categoryId, searchQuery },
+          params: { authorId, genreId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
         }
       );
     }
+    window.localStorage.setItem("date", store.getState().userToken.expDate);
+    window.localStorage.setItem("ref", store.getState().userToken.refreshToken);
+    window.localStorage.setItem("acc", store.getState().userToken.accessToken);
     return c.data;
   }
 
@@ -149,9 +178,21 @@ export function BookListUserSide() {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
           const d = new Date();
-    d.setMinutes(d.getMinutes() +1);
-    const dd = d.toString();
-    dispatch(setExpDate(dd));
+          d.setMinutes(d.getMinutes() + 1);
+          const dd = d.toString();
+          dispatch(setExpDate(dd));
+          window.localStorage.setItem(
+            "date",
+            store.getState().userToken.expDate
+          );
+          window.localStorage.setItem(
+            "ref",
+            store.getState().userToken.refreshToken
+          );
+          window.localStorage.setItem(
+            "acc",
+            store.getState().userToken.accessToken
+          );
         });
       getAllResults("", "", "");
     } else {
@@ -159,44 +200,45 @@ export function BookListUserSide() {
     }
   }, []);
 
-
-   async function onClick(e) {
+  async function onClick(e) {
     SetCurrentPage(1);
     let newResults;
-    if(e.keyPath[1] == "sub2")
-    {
-      newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
+    if (e.keyPath[1] == "sub2") {
+      newResults = await getAllResults(
+        "",
+        parseInt(e.key) + 1 - authors.length,
+        ""
+      );
+    } else {
+      newResults = await getAllResults(parseInt(e.key) + 1, "", "");
     }
-    else{
-      newResults = await getAllResults(parseInt(e.key) + 1, "","");
-    }
-      await dispatch(addFilteredData(newResults));
+    await dispatch(addFilteredData(newResults));
     await SetData(store.getState().filteredData.filteredData);
   }
 
-    async function deselectItem(e) {
-      SetCurrentPage(1);
-      let newResults;
-      if(e.keyPath[1] == "sub2")
-        {
-          newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
-          
-        }
-        else{
-          newResults = await getAllResults(parseInt(e.key) + 1, "","");
-          
-        }
-      await dispatch(removeFilteredData(newResults));
-      SetData(store.getState().filteredData.filteredData);
-      if(store.getState().filteredData.filteredData.length == 0)
-      {
-        getAllResults("", "", "");
-      }
-  
+  async function deselectItem(e) {
+    SetCurrentPage(1);
+    let newResults;
+    if (e.keyPath[1] === "sub2") {
+      newResults = await getAllResults(
+        "",
+        parseInt(e.key) + 1 - authors.length,
+        ""
+      );
+    } else {
+      newResults = await getAllResults(parseInt(e.key) + 1, "", "");
     }
- 
+    await dispatch(removeFilteredData(newResults));
+    SetData(store.getState().filteredData.filteredData);
+    if (store.getState().filteredData.filteredData.length === 0) {
+      getAllResults("", "", "");
+    }
+  }
+
   for (let i = authors.length; i < janres.length + authors.length; i++) {
-    let children = [{ key: `${i}`, label: `${janres[i-authors.length].name}` }];
+    let children = [
+      { key: `${i}`, label: `${janres[i - authors.length].name}` },
+    ];
     menuJanres = [...menuJanres, ...children];
   }
 
@@ -210,7 +252,7 @@ export function BookListUserSide() {
   const items = [
     {
       key: "sub1",
-      label: "Authors",
+      label: "Авторы",
       icon: <ContactsOutlined />,
       children: [
         {
@@ -222,7 +264,7 @@ export function BookListUserSide() {
     },
     {
       key: "sub2",
-      label: "Janres",
+      label: "Жанры",
       icon: <AppstoreOutlined />,
       children: menuJanres,
     },
@@ -255,7 +297,7 @@ export function BookListUserSide() {
         }}
       >
         <Search
-          placeholder="input search text"
+          placeholder="Введите название книги"
           onSearch={onSearch}
           style={{
             display: "flex",
@@ -354,12 +396,7 @@ export function BookListUserSide() {
             const authorName = book.author
               ? `${book.author.firstName} ${book.author.lastName}`
               : "Unknown Author";
-            return (
-              <BookDataUserSide
-                book = {book}
-                authorName={authorName}
-              />
-            );
+            return <BookDataUserSide book={book} authorName={authorName} />;
           })}
         </Row>
 

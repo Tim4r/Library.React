@@ -2,7 +2,8 @@ import { Layout, Card, Modal, Image, Calendar, theme, Tooltip, message } from "a
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { store } from "./Store";
+import { store } from "../ReduxStore/Store";
+import { useParams } from "react-router-dom";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
@@ -10,6 +11,7 @@ const { Meta } = Card;
 
 export function BookDataUserSide({ book, authorName }) {
   const { token } = theme.useToken();
+  const { id } = useParams();
   const wrapperStyle = {
     width: 300,
     border: `1px solid ${token.colorBorderSecondary}`,
@@ -23,22 +25,23 @@ export function BookDataUserSide({ book, authorName }) {
   const onSelectDate = (newValue) => {
     setSelectedValue(newValue);
   };
-async function handleLoan() {
-  const currentDate = new Date();
+
+  const handleLoan = () => {
+    const currentDate = new Date();
     const selectedDate = new Date(selectedValue);
     const diffDays = (selectedDate - currentDate) / (1000 * 60 * 60 * 24);
 
     if (diffDays < 1 || diffDays > 31) {
       message.error("Date must be between 1 and 31 days from today.");
+      return;
     }
 
     const data = {
       returnTime: selectedValue.format("YYYY-MM-DD"),
-      userId: parseInt(book?.userId || 0),
+      userId: id,
       bookId: book?.id,
       returnDate: selectedValue,
     };
-
     axios
       .post(`https://localhost:7190/api/HandOutBook`, data, {
         headers: {
@@ -48,20 +51,17 @@ async function handleLoan() {
       .then(() => {
         setIsBookTaken(true); // Update the book's status as taken
         setOpen(false);
+        message.success(`Loan created. Return by ${selectedValue}`);
       })
       .catch((error) => {
-        console.error("Failed to create loan.", error);
         message.error("Book is already loan, please, choose another");
       });
-      if(isBookTaken)
-      {
-        message.success(`Loan created. Return by ${selectedValue}`);
-      }
+      
   };
 
   const openLoanModal = () => {
     setOpen(true);
-}
+  };
 
   return (
     <Layout className="layout">
@@ -203,12 +203,12 @@ async function handleLoan() {
       </div>
 
       <Modal
-        title="Loan Book"
+        title="Бронирование книги"
         open={open}
         onOk={handleLoan}
         onCancel={() => setOpen(false)}
       >
-        <p>Select a return date (1-31 days from today)</p>
+        <p>Выберите дату возврата (в диапазоне 1-31 дней с текущей даты)</p>
         <Calendar fullscreen={false} onSelect={onSelectDate} />
       </Modal>
     </Layout>

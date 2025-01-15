@@ -12,8 +12,8 @@ import {
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setAccessToken, setRefreshToken, setExpDate } from "./tokenSlice";
-import { store } from "./Store";
+import { setAccessToken, setRefreshToken, setExpDate } from "../ReduxStore/tokenSlice";
+import { store } from "../ReduxStore/Store";
 import { TableOutlined, PoweroffOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { PlusOutlined } from "@ant-design/icons";
@@ -24,7 +24,7 @@ const { Header } = Layout;
 const { Meta } = Card;
 const { Search, TextArea } = Input;
 
-export function BookInfoUserSideWithoutPlusBtn({ book }) {
+export function BookInfoUserSide({ book }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const accessToken = useSelector((state) => state.userToken.accessToken);
@@ -47,6 +47,7 @@ export function BookInfoUserSideWithoutPlusBtn({ book }) {
   const [collapsed, setCollapsed] = useState(false);
   const [bookLibraryOpen, setBookLibraryOpen] = useState(false);
 
+
   const onSelectDate = (newValue) => {
     setSelectedValue(newValue);
   };
@@ -64,7 +65,7 @@ export function BookInfoUserSideWithoutPlusBtn({ book }) {
     const data = {
       returnTime: selectedValue.format("YYYY-MM-DD"),
       userId: parseInt(book?.userId || 0),
-      bookId: id,
+      bookId: book?.id,
       returnDate: selectedValue,
     };
     setConfirmLoading(true);
@@ -156,7 +157,7 @@ export function BookInfoUserSideWithoutPlusBtn({ book }) {
             marginLeft: 450,
             marginTop: 15,
           }}
-        />
+        />    
         <p
           style={{
             fontSize: "12px",
@@ -236,6 +237,56 @@ export function BookInfoUserSideWithoutPlusBtn({ book }) {
                   description={authorId || "Author Id"}
                 />
               </Card>
+
+              {!isBookTaken ? (
+                <Tooltip title="Take this book">
+                  <div
+                    onClick={() => setOpen(true)}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: 16,
+                      color: "#52c41a",
+                      backgroundColor: "#fff",
+                      borderRadius: "50%",
+                      padding: 4,
+                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                      cursor: "pointer",
+                      width: 24,
+                      height: 24,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <PlusOutlined />
+                  </div>
+                </Tooltip>
+              ) : (
+                <Tooltip title="This book is already taken">
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: 16,
+                      color: "#d9d9d9",
+                      backgroundColor: "#fff",
+                      borderRadius: "50%",
+                      padding: 4,
+                      boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+                      width: 24,
+                      height: 24,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <PlusOutlined />
+                  </div>
+                </Tooltip>
+              )}
             </div>
           </div>
 
@@ -345,4 +396,4 @@ export function BookInfoUserSideWithoutPlusBtn({ book }) {
   );
 }
 
-export default BookInfoUserSideWithoutPlusBtn;
+export default BookInfoUserSide;

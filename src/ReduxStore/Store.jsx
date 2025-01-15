@@ -1,6 +1,7 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore,applyMiddleware } from '@reduxjs/toolkit';
 import tokenUserReducer from './tokenSlice';
 import filteredDataReducer  from './dataSlice';
+import { thunk } from 'redux-thunk';
 export const store = configureStore({
     reducer:{
         userToken: tokenUserReducer,
@@ -10,4 +11,5 @@ export const store = configureStore({
         getDefaultMiddleware({
           serializableCheck: false,
         }),
+        
 })

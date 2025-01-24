@@ -10,7 +10,7 @@ import {
   message,
 } from "antd";
 import React, { useState, useEffect } from "react";
-import { BookData } from "./BookData";
+import { BookData } from "../Components/BookCard";
 import axios from "axios";
 import moment from "moment";
 import { store } from "../ReduxStore/Store";
@@ -30,7 +30,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { setAccessToken, setExpDate, setRefreshToken } from "../ReduxStore/tokenSlice";
 const { Header, Sider } = Layout;
 const { Search } = Input;
-export function BookList() {
+
+export function MainAdmin() {
   const accessToken = useSelector((state) => state.userToken.accessToken);
   const refreshToken = useSelector((state) => state.userToken.refreshToken);
   const dispatch = useDispatch();
@@ -78,7 +79,6 @@ export function BookList() {
           window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
           window.localStorage.setItem('acc', store.getState().userToken.accessToken);
         });
-        console.log("hi")
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {

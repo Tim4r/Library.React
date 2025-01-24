@@ -24,7 +24,7 @@ import { useNavigate } from "react-router-dom";
 const { Header, Sider } = Layout;
 const { Search } = Input;
 
-export function BookListUserSide() {
+export function MainUser() {
   const dispatch = useDispatch();
   const { id } = useParams();
   const navigate = useNavigate();

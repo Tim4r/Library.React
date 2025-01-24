@@ -15,7 +15,7 @@ const { Meta } = Card;
 const { Search } = Input;
 const { TextArea } = Input;
 
-export function BookInfoForEdit() {
+export function BookEdit() {
   const accessToken = useSelector((state) => state.userToken.accessToken);
   const refreshToken = useSelector((state) => state.userToken.refreshToken);
   const dispatch = useDispatch();
@@ -222,18 +222,7 @@ else
             marginTop: 15,
           }}
         />
-        <p
-          style={{
-            fontSize: "12px",
-            position: "fixed",
-            top: 0,
-            marginLeft: 1200,
-            marginTop: 0,
-          }}
-        >
-          Антон
-        </p>
-
+        
         <PoweroffOutlined
           style={{
             position: "fixed",
@@ -498,4 +487,4 @@ else
   );
 }
 
-export default BookInfoForEdit;
+export default BookEdit;

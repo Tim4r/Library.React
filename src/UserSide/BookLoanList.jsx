@@ -21,7 +21,7 @@ import { useNavigate, useParams } from "react-router-dom";
 const { Header, Sider } = Layout;
 const { Search } = Input;
 
-export function BookListUser() {
+export function BookLoanList() {
   const { id } = useParams();
   const accessToken = useSelector((state) => state.userToken.accessToken);
   const refreshToken = useSelector((state) => state.userToken.refreshToken);

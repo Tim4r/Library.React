@@ -14,7 +14,7 @@ const { Meta } = Card;
 const { Search } = Input;
 const { TextArea } = Input;
 
-export function BookInfo() {
+export function BookCreate() {
   const navigate = useNavigate();
   const [selectedImage, SetSelectedImage] = useState(null);
   const [imageBase64, SetImageBase64] = useState(null);
@@ -124,18 +124,6 @@ export function BookInfo() {
             marginTop: 15,
           }}
         />
-
-        <p
-          style={{
-            fontSize: "12px",
-            position: "fixed",
-            top: 0,
-            marginLeft: 1200,
-            marginTop: 0,
-          }}
-        >
-          Anton
-        </p>
 
         <PoweroffOutlined
           style={{
